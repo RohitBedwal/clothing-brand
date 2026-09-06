@@ -1,75 +1,42 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import Header from '../components/Header';
 import NavBar2 from '../components/NavBar2';
 import SideBar from '../components/SideBar';
 import SortingBox from '../components/SortingBox';
-import FoodCard2 from '../components/FoodCard2';
-import { sideBarContext } from '../context/CategoryContext';
-import axios from 'axios'
-import { urlContext } from '../context/ProductsByCategoryContext';
-import Pagination from '../components/Pagination'
-import Cart from './Cart';
+import FashionCard from '../components/FashionCard';
+import Cart from '../pages/Cart';
 
 
 const ProductByCategory = () => {
-    const {url,setUrl} = useContext(urlContext)
-   
-    
-      const [products, setProducts] = useState([]);
-      
     
       const[ascName,setAscName]= useState(false);
         const[descName,setDescName]= useState(false);
         const[ascGrade,setAscGrade]= useState(false);
         const[descGrade,setDescGrade]= useState(false);
-        const[defaultValue,setDefaultValue]= useState(false);
-
-        const [page, setPage] = useState(1);
-        const [totalPages, setTotalPage] = useState(0);
-        
-        
       
-        async function handleAllProducts(){
-            try{
-            const res = await axios.get(`${url}.json`,{
-              params:{page}
-            })
-                setProducts(res.data.products)
-                setTotalPage(Math.floor(res.data.count/50))
-
-        }
-        
-              catch(err){
-                console.log(err)
-                
-              }
-            }
-       useEffect(() => {
-         handleAllProducts()
-        
-         
-       }, [url,page])
-    
-
 
   return (
-    <div  className='bg-white '>
+    <div className='bg-white'>
     <Header/>
     <NavBar2/>
     <Cart/>
     <SideBar />
-  <div className=' h-[33vw] overflow-hidden '>
-    <img className=' rotate-180' src="../src/assets/images/Home.jpg" alt="" />
     
+    <div className='h-[50vh] md:h-[60vh] overflow-hidden mt-[110px] relative'>
+      <img 
+        className='w-full h-full object-cover' 
+        src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&h=1080&fit=crop" 
+        alt="Collection" 
+      />
+      <div className='absolute inset-0 bg-black/30'></div>
+      <div className='absolute inset-0 flex items-center justify-center'>
+        <h1 className='font-[amma4] text-white text-[32px] md:text-[48px] tracking-[6px] uppercase'>Collection</h1>
+      </div>
+    </div>
 
+  <SortingBox setAscName={setAscName} setDescName={setDescName} setAscGrade={setAscGrade} setDescGrade={setDescGrade} />
+  <FashionCard ascName={ascName} descName={descName} ascGrade={ascGrade} descGrade={descGrade} />
   </div>
-  <SortingBox setAscName={setAscName} setDescName={setDescName} setDefaultValue={defaultValue} setAscGrade={setAscGrade} setDescGrade={setDescGrade}  />
-  <FoodCard2 ascName={ascName} descName={descName} ascGrade={ascGrade}  descGrade={descGrade} products={products}/>
-  <Pagination  totalPages={totalPages} currentPage={page} onPageChange={setPage}/>
-  </div>
- 
-  
-
   )
 }
 

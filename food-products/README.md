@@ -1,55 +1,35 @@
-# Food Products Application
+# Echo Studio - Contemporary Fashion
 
-This project is a React-based application designed for managing and displaying food products. Below is a detailed overview of the project's structure and its components.
+This project is a React-based e-commerce application for Echo Studio, a premium luxury fashion brand. Below is a detailed overview of the project's structure and its components.
 
 ---
 
 ## Components
 
 ### `/components`
-- **FoodCard2.jsx**  
-  A card component for displaying food product details with enhanced styling.
+- **FashionCard.jsx**  
+  A card component for displaying fashion product details with enhanced styling.
 
 - **Header.jsx**  
-  Renders the header section, including the application logo and navigation links.
+  Renders the header section, including free shipping banner.
 
 - **Home.jsx**  
-  The main component for the homepage, showcasing featured products and categories.
+  The main component for the homepage, showcasing featured products, new arrivals slider, and categories.
 
 - **NavBar2.jsx**  
-  A navigation bar component with links to various sections of the application like search bar , home ,cart login .
-
-- **Pagination.jsx**  
-  Handles pagination for product lists, allowing users to navigate between pages.
+  A navigation bar component with links to Shop, New Arrivals, Women, Collections, and cart.
 
 - **ProductCard.jsx**  
-  A reusable card component for displaying individual product details.
+  A detailed product page component with gallery, size selection, and accordion details.
+
+- **ScrollToTop.jsx**  
+  Scrolls to top on route changes.
 
 - **SideBar.jsx**  
-  A sidebar component for filtering products by categories or other criteria.
+  A sidebar component for filtering products by categories.
 
 - **SortingBox.jsx**  
-  Provides sorting options for products, such as by name  or grade ascending to descending.
-
----
-
-## Contexts
-
-### `/context`
-- **BarcodeContext.jsx**  
-  Manages the state and logic for barcode scanning functionality saves the barcode in localStorage.
-
-- **CartContext.jsx**  
-  Provides a context for managing the shopping cart state across the application.
-
-- **CategoryContext.jsx**  
-  Handles the state for product categories and their selection.
-
-- **InputContext.jsx**  
-  Manages user input states, such as search queries.
-
-- **ProductsByCategoryContext.jsx**  
-  Provides context for managing products filtered by selected categories.
+  Provides sorting options for products, such as by name or price ascending to descending.
 
 ---
 
@@ -59,68 +39,45 @@ This project is a React-based application designed for managing and displaying f
 - **Cart.jsx**  
   Displays the user's shopping cart and allows them to proceed to checkout.
 
-- **ProductByCategory.jsx**  
-  Shows products filtered by a specific category.
+- **CollectionProducts.jsx**  
+  Shows products filtered by a specific collection with infinite scroll.
+
+- **Collections.jsx**  
+  Displays all available collections in a 2-column grid layout.
+
+- **NewArrivals.jsx**  
+  Shows the latest fashion arrivals with carousel navigation.
 
 - **ProductDetails.jsx**  
   Displays detailed information about a selected product.
 
 - **SearchName.jsx**  
-  Provides a search interface for finding products by name and barcode.
+  Provides a search interface for finding products by name.
 
 ---
 
-## Public Assets
+## Contexts
 
-### `/public`
-- **vite.svg**  
-  The Vite logo used in the application.
+### `/context`
+- **CartContext.jsx**  
+  Provides a context for managing the shopping cart state across the application.
 
----
+- **CategoryContext.jsx**  
+  Handles the state for product categories and their selection.
 
-## Source Files
-
-### `/src/assets`
-#### Fonts
-- **/font**  
-  Contains custom fonts used in the application.
-
-#### Images
-- **home.jpg**  
-  An image used on the homepage.  
-- **Home1.png**  
-  Another image used for homepage styling.  
-- **logo.png**  
-  The application logo.
-
-#### React Assets
-- **react.svg**  
-  The React logo used in the application.
-
-### `/src`
-- **App.css**  
-  Styles for the main application component.  
-- **App.jsx**  
-  The root component that sets up routing and renders the main structure.  
-- **index.css**  
-  Global styles for the application.  
-- **main.jsx**  
-  The entry point for the React application.
+- **ProductsByCategoryContext.jsx**  
+  Provides context for managing products filtered by selected categories.
 
 ---
 
 ## Configuration and Environment
 
 - **.env**  
-  Environment variables for the application.  
+  Environment variables for the application.
 - **.gitignore**  
-  Specifies files and directories to be ignored by Git.  
-- **eslint.config.js**  
-  Configuration for ESLint to enforce coding standards.  
+  Specifies files and directories to be ignored by Git.
 - **index.html**  
-  The main HTML file for the application.  
-- **package-lock.json**  
-  Automatically generated file for locking dependencies.  
+  The main HTML file for the application.
 - **package.json**  
   Contains metadata and dependencies for the project.
 
@@ -130,8 +87,8 @@ This project is a React-based application designed for managing and displaying f
 
 1. Clone the repository.
 2. Install dependencies using `npm install`.
-3. Start the development server with `npm start`.
-4. Open the application in your browser at `http://localhost:3000`.
+3. Start the development server with `npm run dev`.
+4. Open the application in your browser at `http://localhost:5173`.
 
 ---
 
