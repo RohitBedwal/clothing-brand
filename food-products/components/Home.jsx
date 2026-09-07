@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react'
+import React, { useState, useContext, useEffect, useMemo, memo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import NavBar2 from './NavBar2'
@@ -11,6 +11,62 @@ import categoryService from '../services/categoryService'
 import bannerService from '../services/bannerService'
 
 const ITEMS_PER_VIEW = 4;
+
+const HomeProductCard = memo(({ item, showBadge, openQuickView }) => {
+  const navigate = useNavigate();
+  const price = Number(item.price) || 0;
+  const comparePrice = item.compareAtPrice ? Number(item.compareAtPrice) : null;
+  const hasDiscount = comparePrice && comparePrice > price;
+  const image = item.images?.[0]?.url || '/placeholder.png';
+
+  return (
+    <div className='group cursor-pointer' onClick={() => navigate(`/product/${item.id}`)}>
+      <div className='relative overflow-hidden bg-gray-50 aspect-[3/4] mb-[12px]'>
+        <img
+          src={image}
+          alt={item.name}
+          className='w-full h-full object-cover transition-transform duration-700 group-hover:scale-105'
+          loading="lazy"
+        />
+        {showBadge && (
+          <div className='absolute top-[10px] left-[10px] px-[8px] py-[4px] bg-black text-white text-[9px] font-[amma3] tracking-[2px] uppercase'>
+            New
+          </div>
+        )}
+        {item.isSale && !showBadge && comparePrice && (
+          <div className='absolute top-[10px] left-[10px] px-[8px] py-[4px] bg-red-600 text-white text-[9px] font-[amma3] tracking-[2px] uppercase'>
+            Sale
+          </div>
+        )}
+        <div
+          onClick={(e) => { e.stopPropagation(); openQuickView(item); }}
+          className='absolute bottom-[10px] right-[10px] h-[36px] w-[36px] bg-white flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer hover:bg-black hover:text-white opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0'
+        >
+          <i className="ri-eye-line text-[15px]"></i>
+        </div>
+        <div
+          onClick={(e) => { e.stopPropagation(); openQuickView(item); }}
+          className='absolute bottom-[10px] right-[52px] h-[36px] w-[36px] bg-white flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer hover:bg-black hover:text-white opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0'
+        >
+          <i className="ri-shopping-bag-line text-[15px]"></i>
+        </div>
+      </div>
+      <h3 className='font-[amma4] text-[13px] text-gray-900 uppercase tracking-[1px] mb-[4px] truncate text-center'>{item.name}</h3>
+      <div className='flex items-center justify-center gap-[8px]'>
+        <span className={`font-[amma3] text-[13px] ${hasDiscount ? 'text-red-600' : 'text-gray-700'}`}>
+          ₹{price.toLocaleString('en-IN')}
+        </span>
+        {hasDiscount && (
+          <span className='font-[amma3] text-[12px] text-gray-400 line-through'>
+            ₹{comparePrice.toLocaleString('en-IN')}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+});
+
+HomeProductCard.displayName = 'HomeProductCard';
 
 const Home = () => {
   const [ascName, setAscName] = useState(false);
@@ -43,10 +99,6 @@ const Home = () => {
     fetchData();
   }, []);
 
-  const getImage = (p) => p.images?.[0]?.url || '/placeholder.png';
-  const getPrice = (p) => Number(p.price);
-  const getComparePrice = (p) => p.compareAtPrice ? Number(p.compareAtPrice) : null;
-
   const newArrivalsTotal = Math.max(1, Math.ceil(newArrivals.length / ITEMS_PER_VIEW));
   const bestSellersTotal = Math.max(1, Math.ceil(bestSellers.length / ITEMS_PER_VIEW));
 
@@ -62,64 +114,6 @@ const Home = () => {
     "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=500&h=650&fit=crop",
     "https://images.unsplash.com/photo-1583496661160-fb5886a0afe0?w=500&h=650&fit=crop",
   ];
-
-  const renderProductCard = (item, showBadge = false) => {
-    const price = getPrice(item);
-    const comparePrice = getComparePrice(item);
-    const hasDiscount = comparePrice && comparePrice > price;
-
-    return (
-      <div key={item.id} className='group cursor-pointer'>
-        <div className='relative overflow-hidden bg-gray-50 aspect-[3/4] mb-[12px]'>
-          <img
-            src={getImage(item)}
-            alt={item.name}
-            className='w-full h-full object-cover transition-transform duration-700 group-hover:scale-105'
-onClick={() => navigate(`/product/${item.id}`)}
-          />
-          {showBadge && (
-            <div className='absolute top-[10px] left-[10px] px-[8px] py-[4px] bg-black text-white text-[9px] font-[amma3] tracking-[2px] uppercase'>
-              New
-            </div>
-          )}
-          {item.isSale && !showBadge && comparePrice && (
-            <div className='absolute top-[10px] left-[10px] px-[8px] py-[4px] bg-red-600 text-white text-[9px] font-[amma3] tracking-[2px] uppercase'>
-              Sale
-            </div>
-          )}
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              openQuickView(item);
-            }}
-            className='absolute bottom-[10px] right-[10px] h-[36px] w-[36px] bg-white flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer hover:bg-black hover:text-white opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0'
-          >
-            <i className="ri-eye-line text-[15px]"></i>
-          </div>
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              openQuickView(item);
-            }}
-            className='absolute bottom-[10px] right-[52px] h-[36px] w-[36px] bg-white flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer hover:bg-black hover:text-white opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0'
-          >
-            <i className="ri-shopping-bag-line text-[15px]"></i>
-          </div>
-        </div>
-        <h3 className='font-[amma4] text-[13px] text-gray-900 uppercase tracking-[1px] mb-[4px] truncate text-center' onClick={() => navigate(`/product/${item.id}`)}>{item.name}</h3>
-        <div className='flex items-center justify-center gap-[8px]'>
-          <span className={`font-[amma3] text-[13px] ${hasDiscount ? 'text-red-600' : 'text-gray-700'}`}>
-            ₹{price.toLocaleString('en-IN')}
-          </span>
-          {hasDiscount && (
-            <span className='font-[amma3] text-[12px] text-gray-400 line-through'>
-              ₹{comparePrice.toLocaleString('en-IN')}
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className='bg-white'>
@@ -172,7 +166,7 @@ onClick={() => navigate(`/product/${item.id}`)}
               {Array.from({ length: newArrivalsTotal }).map((_, slideIdx) => (
                 <div key={slideIdx} className='min-w-full grid grid-cols-2 md:grid-cols-4 gap-x-[16px] gap-y-[30px]'>
                   {newArrivals.slice(slideIdx * ITEMS_PER_VIEW, slideIdx * ITEMS_PER_VIEW + ITEMS_PER_VIEW).map((item) => (
-                    renderProductCard(item, true)
+                    <HomeProductCard key={item.id} item={item} showBadge={true} openQuickView={openQuickView} />
                   ))}
                 </div>
               ))}
@@ -262,7 +256,7 @@ onClick={() => navigate(`/product/${item.id}`)}
               {Array.from({ length: bestSellersTotal }).map((_, slideIdx) => (
                 <div key={slideIdx} className='min-w-full grid grid-cols-2 md:grid-cols-4 gap-x-[16px] gap-y-[30px]'>
                   {bestSellers.slice(slideIdx * ITEMS_PER_VIEW, slideIdx * ITEMS_PER_VIEW + ITEMS_PER_VIEW).map((item) => (
-                    renderProductCard(item)
+                    <HomeProductCard key={item.id} item={item} showBadge={false} openQuickView={openQuickView} />
                   ))}
                 </div>
               ))}
