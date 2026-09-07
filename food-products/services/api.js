@@ -1,24 +1,25 @@
 const API_BASE = '/api';
 
 const request = async (url, options = {}) => {
-  try {
-    const response = await fetch(`${API_BASE}${url}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
+  const { headers: customHeaders, ...rest } = options;
+  const headers = {
+    'Content-Type': 'application/json',
+    ...customHeaders,
+  };
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Request failed' }));
-      throw new Error(error.message || `HTTP ${response.status}`);
-    }
+  const response = await fetch(`${API_BASE}${url}`, {
+    credentials: 'include',
+    headers,
+    ...rest,
+  });
 
-    return await response.json();
-  } catch (error) {
-    throw error;
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(data?.message || `HTTP ${response.status}`);
   }
+
+  return data;
 };
 
 export const api = {

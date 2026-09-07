@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react'
+import authService from '../services/authService'
 
 export const authContext = createContext();
 
@@ -7,116 +8,64 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = JSON.parse(localStorage.getItem('echo_user'));
-    if (savedUser) {
-      setCurrentUser(savedUser);
+    const checkAuth = async () => {
+      try {
+        const data = await authService.getMe();
+        if (data.success && data.user) {
+          setCurrentUser(data.user);
+        }
+      } catch {
+        setCurrentUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  const login = useCallback(async (email, password) => {
+    const data = await authService.login(email, password);
+    if (data.success) {
+      setCurrentUser(data.user);
+      return data.user;
     }
-    setLoading(false);
+    throw new Error(data.message || 'Login failed');
   }, []);
 
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('echo_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('echo_user');
+  const register = useCallback(async (data) => {
+    const res = await authService.register(data);
+    if (res.success) {
+      setCurrentUser(res.user);
+      return res.user;
     }
-  }, [currentUser]);
-
-  const login = useCallback((email, password) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!email || !password) {
-          reject(new Error('Email and password are required'));
-          return;
-        }
-        const users = JSON.parse(localStorage.getItem('echo_users') || '[]');
-        const user = users.find(u => u.email === email);
-        if (!user) {
-          reject(new Error('No account found with this email'));
-          return;
-        }
-        if (user.password !== password) {
-          reject(new Error('Incorrect password'));
-          return;
-        }
-        const { password: _, ...userWithoutPassword } = user;
-        setCurrentUser(userWithoutPassword);
-        resolve(userWithoutPassword);
-      }, 500);
-    });
+    throw new Error(res.message || 'Registration failed');
   }, []);
 
-  const register = useCallback((data) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem('echo_users') || '[]');
-        if (users.find(u => u.email === data.email)) {
-          reject(new Error('An account with this email already exists'));
-          return;
-        }
-        const newUser = {
-          _id: 'usr_' + Date.now(),
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          phone: data.phone,
-          password: data.password,
-          createdAt: new Date().toISOString(),
-        };
-        users.push(newUser);
-        localStorage.setItem('echo_users', JSON.stringify(users));
-        const { password: _, ...userWithoutPassword } = newUser;
-        setCurrentUser(userWithoutPassword);
-        resolve(userWithoutPassword);
-      }, 500);
-    });
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout();
+    } finally {
+      setCurrentUser(null);
+    }
   }, []);
 
-  const logout = useCallback(() => {
-    setCurrentUser(null);
-    localStorage.removeItem('echo_user');
+  const updateProfile = useCallback(async (data) => {
+    const res = await authService.updateProfile(data);
+    if (res.success) {
+      setCurrentUser(res.user);
+      return res.user;
+    }
+    throw new Error(res.message || 'Update failed');
   }, []);
 
-  const updateProfile = useCallback((data) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem('echo_users') || '[]');
-        const idx = users.findIndex(u => u._id === currentUser._id);
-        if (idx === -1) {
-          reject(new Error('User not found'));
-          return;
-        }
-        users[idx] = { ...users[idx], ...data };
-        localStorage.setItem('echo_users', JSON.stringify(users));
-        const { password: _, ...userWithoutPassword } = users[idx];
-        setCurrentUser(userWithoutPassword);
-        resolve(userWithoutPassword);
-      }, 300);
-    });
-  }, [currentUser]);
-
-  const forgotPassword = useCallback((email) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!email) {
-          reject(new Error('Email is required'));
-          return;
-        }
-        resolve({ message: 'Password reset instructions sent to your email' });
-      }, 500);
-    });
+  const forgotPassword = useCallback(async (email) => {
+    const res = await authService.forgotPassword(email);
+    return res;
   }, []);
 
-  const resetPassword = useCallback((token, password) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!token || !password) {
-          reject(new Error('Token and password are required'));
-          return;
-        }
-        resolve({ message: 'Password has been reset successfully' });
-      }, 500);
-    });
+  const resetPassword = useCallback(async (token, password) => {
+    const res = await authService.resetPassword(token, password);
+    return res;
   }, []);
 
   const isAuthenticated = !!currentUser;

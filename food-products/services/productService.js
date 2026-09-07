@@ -5,19 +5,12 @@ export const productService = {
     const query = new URLSearchParams(params).toString();
     return api.get(`/products?${query}`);
   },
-  getProduct: (id) => api.get(`/products/${id}`),
-  getProductsByCategory: (category, params) => {
-    const query = new URLSearchParams(params).toString();
-    return api.get(`/products/category/${category}?${query}`);
-  },
-  getProductsByCollection: (collection, params) => {
-    const query = new URLSearchParams(params).toString();
-    return api.get(`/products/collection/${collection}?${query}`);
-  },
-  searchProducts: (query) => api.get(`/products/search?q=${query}`),
-  getNewArrivals: () => api.get('/products/new-arrivals'),
-  getSaleProducts: () => api.get('/products/sale'),
-  getFeaturedProducts: () => api.get('/products/featured'),
+  getProductBySlug: (slug) => api.get(`/products/${slug}`),
+  getNewArrivals: () => api.get('/products?newArrival=true&sort=newest'),
+  getSaleProducts: () => api.get('/products?sale=true'),
+  getFeaturedProducts: () => api.get('/products?featured=true'),
+  getReadyToShip: () => api.get('/products?readyToShip=true'),
+  searchProducts: (q) => api.get(`/search?q=${encodeURIComponent(q)}`),
 };
 
 export default productService;

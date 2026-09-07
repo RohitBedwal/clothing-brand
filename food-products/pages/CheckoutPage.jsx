@@ -1,6 +1,11 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { cartOpenContext } from '../context/CartContext'
+import { authContext } from '../context/AuthContext'
+import orderService from '../services/orderService'
+import { formatPrice } from '../src/utils/formatPrice'
+import userService from '../services/userService'
+import couponService from '../services/couponService'
 import NavBar2 from '../components/NavBar2'
 
 const shippingMethods = [
@@ -18,25 +23,29 @@ const paymentMethods = [
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { cartItems, subtotal, totalQuantity, setCartItems } = useContext(cartOpenContext);
+  const { cartItems, subtotal, totalQuantity, fetchCart } = useContext(cartOpenContext);
+  const { currentUser } = useContext(authContext);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errors, setErrors] = useState({});
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [showNewAddress, setShowNewAddress] = useState(false);
 
   // Contact
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState(currentUser?.email || '');
+  const [phone, setPhone] = useState(currentUser?.phone || '');
   const [newsletter, setNewsletter] = useState(false);
 
-  // Shipping Address
+  // Shipping Address (for new address)
   const [country, setCountry] = useState('India');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [firstName, setFirstName] = useState(currentUser?.firstName || '');
+  const [lastName, setLastName] = useState(currentUser?.lastName || '');
   const [address, setAddress] = useState('');
   const [apartment, setApartment] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [pinCode, setPinCode] = useState('');
-  const [shipPhone, setShipPhone] = useState('');
+  const [shipPhone, setShipPhone] = useState(currentUser?.phone || '');
   const [saveInfo, setSaveInfo] = useState(false);
 
   // Shipping Method
@@ -54,20 +63,43 @@ const CheckoutPage = () => {
   const [discountCode, setDiscountCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [discountApplied, setDiscountApplied] = useState(false);
+  const [couponError, setCouponError] = useState('');
 
   const shippingCost = shippingMethods.find(m => m.id === selectedShipping)?.price || 0;
   const tax = Math.round(subtotal * 0.18);
   const total = subtotal + shippingCost + tax - discount;
 
-  const handleApplyDiscount = () => {
-    if (discountCode.toUpperCase() === 'ECHO10') {
-      setDiscount(Math.round(subtotal * 0.1));
-      setDiscountApplied(true);
-      setErrors(prev => ({ ...prev, discount: '' }));
-    } else {
+  useEffect(() => {
+    const loadAddresses = async () => {
+      try {
+        const res = await userService.getAddresses();
+        if (res.success) {
+          setAddresses(res.addresses || []);
+          const defaultAddr = res.addresses?.find(a => a.isDefault);
+          if (defaultAddr) setSelectedAddressId(defaultAddr.id);
+        }
+      } catch { /* ignore */ }
+    };
+    loadAddresses();
+  }, []);
+
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) return;
+    try {
+      const res = await couponService.validateCoupon(discountCode);
+      if (res.valid) {
+        setDiscount(res.discount || 0);
+        setDiscountApplied(true);
+        setCouponError('');
+      } else {
+        setDiscount(0);
+        setDiscountApplied(false);
+        setCouponError(res.message || 'Invalid discount code');
+      }
+    } catch (err) {
       setDiscount(0);
       setDiscountApplied(false);
-      setErrors(prev => ({ ...prev, discount: 'Invalid discount code' }));
+      setCouponError(err.message || 'Invalid discount code');
     }
   };
 
@@ -75,13 +107,19 @@ const CheckoutPage = () => {
     const newErrors = {};
     if (!email) newErrors.email = 'Email is required';
     if (!phone) newErrors.phone = 'Phone is required';
-    if (!firstName) newErrors.firstName = 'First name is required';
-    if (!lastName) newErrors.lastName = 'Last name is required';
-    if (!address) newErrors.address = 'Address is required';
-    if (!city) newErrors.city = 'City is required';
-    if (!state) newErrors.state = 'State is required';
-    if (!pinCode) newErrors.pinCode = 'PIN code is required';
-    if (!shipPhone) newErrors.shipPhone = 'Phone is required';
+
+    if (showNewAddress || addresses.length === 0) {
+      if (!firstName) newErrors.firstName = 'First name is required';
+      if (!lastName) newErrors.lastName = 'Last name is required';
+      if (!address) newErrors.address = 'Address is required';
+      if (!city) newErrors.city = 'City is required';
+      if (!state) newErrors.state = 'State is required';
+      if (!pinCode) newErrors.pinCode = 'PIN code is required';
+      if (!shipPhone) newErrors.shipPhone = 'Phone is required';
+    } else if (!selectedAddressId) {
+      newErrors.address = 'Select a shipping address';
+    }
+
     if (selectedPayment === 'card') {
       if (!cardNumber) newErrors.cardNumber = 'Card number is required';
       if (!cardName) newErrors.cardName = 'Name on card is required';
@@ -93,45 +131,53 @@ const CheckoutPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!validate()) return;
     if (cartItems.length === 0) return;
 
     setIsProcessing(true);
-    setTimeout(() => {
-      const orderId = 'ECH' + Math.random().toString(36).substr(2, 8).toUpperCase();
-      const order = {
-        id: orderId,
-        date: new Date().toISOString(),
-        status: 'Pending',
+    try {
+      let addressId = selectedAddressId;
+
+      // If using new address, create it first
+      if (showNewAddress || addresses.length === 0) {
+        const addrRes = await userService.createAddress({
+          firstName,
+          lastName,
+          phone: shipPhone,
+          address,
+          apartment,
+          city,
+          state,
+          pinCode,
+          country,
+          isDefault: saveInfo,
+        });
+        if (addrRes.success) {
+          addressId = addrRes.address.id;
+        }
+      }
+
+      // Create order
+      const orderData = {
         items: cartItems.map(item => ({
-          name: item.product_name || item.name,
-          image: item.image || (item.images && item.images[0]) || '',
-          price: item.price || 0,
-          count: item.count || 1,
-          color: item.selectedColor || '',
-          size: item.selectedSize || '',
+          variantId: item.variantId || item.variant?.id,
+          quantity: item.quantity,
         })),
-        subtotal,
-        shipping: shippingCost,
-        discount,
-        tax,
-        total,
-        paymentMethod: selectedPayment,
+        addressId,
         shippingMethod: selectedShipping,
-        shippingAddress: {
-          firstName, lastName, address, apartment, city, state, pinCode, phone: shipPhone,
-        },
-        email,
+        notes: null,
+        couponCode: discountApplied ? discountCode : undefined,
       };
-      const existingOrders = JSON.parse(localStorage.getItem('echo_orders') || '[]');
-      existingOrders.push(order);
-      localStorage.setItem('echo_orders', JSON.stringify(existingOrders));
-      setCartItems([]);
-      localStorage.removeItem('cartItems');
+
+      const order = await orderService.createOrder(orderData);
+      await fetchCart();
+      navigate(`/order-success/${order.orderNumber || order.id}`);
+    } catch (err) {
+      setErrors({ general: err.message });
+    } finally {
       setIsProcessing(false);
-      navigate(`/order-success/${orderId}`);
-    }, 2000);
+    }
   };
 
   const InputField = ({ label, value, onChange, error, placeholder, type = 'text', half = false }) => (
@@ -179,6 +225,12 @@ const CheckoutPage = () => {
           {/* LEFT — Checkout Form */}
           <div className='w-full lg:w-[60%] space-y-[40px]'>
 
+            {errors.general && (
+              <div className='p-[14px] bg-red-50 border border-red-200 text-red-700 font-[amma3] text-[13px] text-center'>
+                {errors.general}
+              </div>
+            )}
+
             {/* Contact Information */}
             <div>
               <h2 className='font-[amma4] text-gray-900 text-[16px] tracking-[3px] uppercase mb-[20px]'>Contact Information</h2>
@@ -195,27 +247,72 @@ const CheckoutPage = () => {
             {/* Shipping Address */}
             <div>
               <h2 className='font-[amma4] text-gray-900 text-[16px] tracking-[3px] uppercase mb-[20px]'>Shipping Address</h2>
-              <div className='space-y-[14px]'>
-                <InputField label="Country / Region" value={country} onChange={(e) => setCountry(e.target.value)} />
-                <div className='flex gap-[14px]'>
-                  <InputField label="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} error={errors.firstName} placeholder="John" half />
-                  <InputField label="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} error={errors.lastName} placeholder="Doe" half />
+
+              {addresses.length > 0 && !showNewAddress && (
+                <div className='space-y-[10px] mb-[16px]'>
+                  {addresses.map(addr => (
+                    <button
+                      key={addr.id}
+                      onClick={() => setSelectedAddressId(addr.id)}
+                      className={`w-full text-left p-[14px] border transition-all ${
+                        selectedAddressId === addr.id ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className='flex items-start gap-[12px]'>
+                        <div className={`w-[16px] h-[16px] rounded-full border-2 flex items-center justify-center mt-[2px] shrink-0 ${
+                          selectedAddressId === addr.id ? 'border-gray-900' : 'border-gray-300'
+                        }`}>
+                          {selectedAddressId === addr.id && <div className='w-[8px] h-[8px] bg-gray-900 rounded-full'></div>}
+                        </div>
+                        <div>
+                          <p className='font-[amma3] text-[13px] text-gray-900'>{addr.firstName} {addr.lastName}</p>
+                          <p className='font-[amma3] text-[12px] text-gray-500 mt-[2px]'>
+                            {addr.address}{addr.apartment ? `, ${addr.apartment}` : ''}, {addr.city}, {addr.state} {addr.pinCode}
+                          </p>
+                          {addr.isDefault && (
+                            <span className='inline-block mt-[4px] px-[6px] py-[1px] bg-gray-100 text-gray-600 font-[amma3] text-[10px] uppercase'>Default</span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                  <button onClick={() => setShowNewAddress(true)} className='font-[amma3] text-[12px] text-gray-500 hover:text-gray-900 underline underline-offset-2'>
+                    Use a new address
+                  </button>
                 </div>
-                <InputField label="Address" value={address} onChange={(e) => setAddress(e.target.value)} error={errors.address} placeholder="123 Main Street" />
-                <InputField label="Apartment, suite, etc. (optional)" value={apartment} onChange={(e) => setApartment(e.target.value)} placeholder="Apt 4B" />
-                <div className='flex gap-[14px]'>
-                  <InputField label="City" value={city} onChange={(e) => setCity(e.target.value)} error={errors.city} placeholder="Mumbai" half />
-                  <InputField label="State" value={state} onChange={(e) => setState(e.target.value)} error={errors.state} placeholder="Maharashtra" half />
+              )}
+
+              {(showNewAddress || addresses.length === 0) && (
+                <div className='space-y-[14px]'>
+                  <InputField label="Country / Region" value={country} onChange={(e) => setCountry(e.target.value)} />
+                  <div className='flex gap-[14px]'>
+                    <InputField label="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} error={errors.firstName} placeholder="John" half />
+                    <InputField label="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} error={errors.lastName} placeholder="Doe" half />
+                  </div>
+                  <InputField label="Address" value={address} onChange={(e) => setAddress(e.target.value)} error={errors.address} placeholder="123 Main Street" />
+                  <InputField label="Apartment, suite, etc. (optional)" value={apartment} onChange={(e) => setApartment(e.target.value)} placeholder="Apt 4B" />
+                  <div className='flex gap-[14px]'>
+                    <InputField label="City" value={city} onChange={(e) => setCity(e.target.value)} error={errors.city} placeholder="Mumbai" half />
+                    <InputField label="State" value={state} onChange={(e) => setState(e.target.value)} error={errors.state} placeholder="Maharashtra" half />
+                  </div>
+                  <div className='flex gap-[14px]'>
+                    <InputField label="PIN Code" value={pinCode} onChange={(e) => setPinCode(e.target.value)} error={errors.pinCode} placeholder="400001" half />
+                    <InputField label="Phone" value={shipPhone} onChange={(e) => setShipPhone(e.target.value)} error={errors.shipPhone} placeholder="+91 98765 43210" type="tel" half />
+                  </div>
+                  <label className='flex items-center gap-[8px] cursor-pointer'>
+                    <input type='checkbox' checked={saveInfo} onChange={(e) => setSaveInfo(e.target.checked)} className='w-[14px] h-[14px] accent-gray-900' />
+                    <span className='font-[amma3] text-[12px] text-gray-500'>Save this information for next time</span>
+                  </label>
+                  {addresses.length > 0 && (
+                    <button onClick={() => setShowNewAddress(false)} className='font-[amma3] text-[12px] text-gray-500 hover:text-gray-900 underline underline-offset-2'>
+                      Use a saved address
+                    </button>
+                  )}
                 </div>
-                <div className='flex gap-[14px]'>
-                  <InputField label="PIN Code" value={pinCode} onChange={(e) => setPinCode(e.target.value)} error={errors.pinCode} placeholder="400001" half />
-                  <InputField label="Phone" value={shipPhone} onChange={(e) => setShipPhone(e.target.value)} error={errors.shipPhone} placeholder="+91 98765 43210" type="tel" half />
-                </div>
-                <label className='flex items-center gap-[8px] cursor-pointer'>
-                  <input type='checkbox' checked={saveInfo} onChange={(e) => setSaveInfo(e.target.checked)} className='w-[14px] h-[14px] accent-gray-900' />
-                  <span className='font-[amma3] text-[12px] text-gray-500'>Save this information for next time</span>
-                </label>
-              </div>
+              )}
+              {errors.address && !showNewAddress && addresses.length > 0 && (
+                <p className='font-[amma3] text-[10px] text-red-500 mt-[4px]'>{errors.address}</p>
+              )}
             </div>
 
             {/* Shipping Method */}
@@ -271,7 +368,6 @@ const CheckoutPage = () => {
                       <span className='font-[amma3] text-[13px] text-gray-900'>{method.name}</span>
                     </button>
 
-                    {/* Card Fields */}
                     {method.id === 'card' && selectedPayment === 'card' && (
                       <div className='pl-[28px] pt-[14px] space-y-[12px] transition-all duration-300'>
                         <InputField label="Card Number" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} error={errors.cardNumber} placeholder="1234 5678 9012 3456" />
@@ -283,7 +379,6 @@ const CheckoutPage = () => {
                       </div>
                     )}
 
-                    {/* UPI Fields */}
                     {method.id === 'upi' && selectedPayment === 'upi' && (
                       <div className='pl-[28px] pt-[14px] transition-all duration-300'>
                         <InputField label="UPI ID" value={upiId} onChange={(e) => setUpiId(e.target.value)} error={errors.upiId} placeholder="yourname@upi" />
@@ -318,23 +413,26 @@ const CheckoutPage = () => {
               {/* Cart Items */}
               <div className='space-y-[16px] mb-[24px] max-h-[300px] overflow-y-auto'>
                 {cartItems.map((item) => {
-                  const price = typeof item.price === 'number' ? item.price : 0;
-                  const itemTotal = price * (item.count || 1);
+                  const variant = item.variant;
+                  const product = variant?.product;
+                  const price = Number(variant?.price) || 0;
+                  const itemTotal = price * (item.quantity || 1);
+                  const img = product?.images?.[0]?.url;
                   return (
-                    <div key={item._id || item.id} className='flex gap-[12px]'>
+                    <div key={item.id} className='flex gap-[12px]'>
                       <div className='w-[60px] h-[76px] bg-gray-50 flex-shrink-0 overflow-hidden relative'>
-                        <img src={item.image_url || item.image} alt={item.product_name || item.name} className='w-full h-full object-cover' />
+                        {img && <img src={img} alt={product?.name} className='w-full h-full object-cover' />}
                         <span className='absolute -top-[1px] -right-[1px] w-[18px] h-[18px] bg-gray-600 text-white text-[9px] font-[amma3] flex items-center justify-center rounded-full'>
-                          {item.count || 1}
+                          {item.quantity || 1}
                         </span>
                       </div>
                       <div className='flex-1'>
-                        <p className='font-[amma4] text-[12px] text-gray-900 uppercase tracking-[1px] mb-[2px]'>{item.product_name || item.name}</p>
-                        <p className='font-[amma3] text-[10px] text-gray-400'>Color: {item.selectedColor || 'Default'}</p>
-                        <p className='font-[amma3] text-[10px] text-gray-400'>Size: {item.selectedSize || 'M'}</p>
-                        <p className='font-[amma3] text-[11px] text-gray-400 mt-[4px]'>Qty: {item.count || 1}</p>
+                        <p className='font-[amma4] text-[12px] text-gray-900 uppercase tracking-[1px] mb-[2px]'>{product?.name || 'Product'}</p>
+                        {variant?.color && <p className='font-[amma3] text-[10px] text-gray-400'>Color: {variant.color}</p>}
+                        {variant?.size && <p className='font-[amma3] text-[10px] text-gray-400'>Size: {variant.size}</p>}
+                        <p className='font-[amma3] text-[11px] text-gray-400 mt-[4px]'>Qty: {item.quantity || 1}</p>
                       </div>
-                      <span className='font-[amma3] text-[12px] text-gray-900'>Rs. {itemTotal.toLocaleString()}</span>
+                      <span className='font-[amma3] text-[12px] text-gray-900'>{formatPrice(itemTotal)}</span>
                     </div>
                   );
                 })}
@@ -358,7 +456,7 @@ const CheckoutPage = () => {
                     Apply
                   </button>
                 </div>
-                {errors.discount && <p className='font-[amma3] text-[10px] text-red-500 mt-[4px]'>{errors.discount}</p>}
+                {couponError && <p className='font-[amma3] text-[10px] text-red-500 mt-[4px]'>{couponError}</p>}
                 {discountApplied && <p className='font-[amma3] text-[10px] text-green-600 mt-[4px]'>Discount applied!</p>}
               </div>
 
@@ -366,28 +464,28 @@ const CheckoutPage = () => {
               <div className='space-y-[12px] mb-[20px]'>
                 <div className='flex justify-between'>
                   <span className='font-[amma3] text-[12px] text-gray-500'>Subtotal ({totalQuantity} items)</span>
-                  <span className='font-[amma3] text-[13px] text-gray-900'>Rs. {subtotal.toLocaleString()}</span>
+                  <span className='font-[amma3] text-[13px] text-gray-900'>{formatPrice(subtotal)}</span>
                 </div>
                 <div className='flex justify-between'>
                   <span className='font-[amma3] text-[12px] text-gray-500'>Shipping</span>
-                  <span className='font-[amma3] text-[13px] text-gray-900'>{shippingCost === 0 ? 'FREE' : `Rs. ${shippingCost}`}</span>
+                  <span className='font-[amma3] text-[13px] text-gray-900'>{shippingCost === 0 ? 'FREE' : formatPrice(shippingCost)}</span>
                 </div>
                 {discount > 0 && (
                   <div className='flex justify-between'>
                     <span className='font-[amma3] text-[12px] text-gray-500'>Discount</span>
-                    <span className='font-[amma3] text-[13px] text-green-600'>-Rs. {discount.toLocaleString()}</span>
+                    <span className='font-[amma3] text-[13px] text-green-600'>-{formatPrice(discount)}</span>
                   </div>
                 )}
                 <div className='flex justify-between'>
                   <span className='font-[amma3] text-[12px] text-gray-500'>Tax (18% GST)</span>
-                  <span className='font-[amma3] text-[13px] text-gray-900'>Rs. {tax.toLocaleString()}</span>
+                  <span className='font-[amma3] text-[13px] text-gray-900'>{formatPrice(tax)}</span>
                 </div>
               </div>
 
               <div className='border-t border-gray-200 pt-[16px] mb-[24px]'>
                 <div className='flex justify-between'>
                   <span className='font-[amma4] text-[14px] text-gray-900 uppercase tracking-[1px]'>Total</span>
-                  <span className='font-[amma4] text-[16px] text-gray-900'>Rs. {total.toLocaleString()}</span>
+                  <span className='font-[amma4] text-[16px] text-gray-900'>{formatPrice(total)}</span>
                 </div>
               </div>
 

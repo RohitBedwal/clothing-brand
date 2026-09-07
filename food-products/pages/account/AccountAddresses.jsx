@@ -1,17 +1,28 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import AccountLayout from '../../components/AccountLayout'
+import userService from '../../services/userService'
 
 const AccountAddresses = () => {
-  const [addresses, setAddresses] = useState(() => JSON.parse(localStorage.getItem('echo_addresses') || '[]'));
+  const [addresses, setAddresses] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', address: '', apartment: '', city: '', state: '', pinCode: '', country: 'India', isDefault: false });
   const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
 
-  const saveAddresses = (addrs) => {
-    setAddresses(addrs);
-    localStorage.setItem('echo_addresses', JSON.stringify(addrs));
+  const fetchAddresses = async () => {
+    try {
+      const res = await userService.getAddresses();
+      setAddresses(res.addresses || []);
+    } catch {
+      setAddresses([]);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => { fetchAddresses(); }, []);
 
   const openAdd = () => {
     setEditingId(null);
@@ -21,8 +32,8 @@ const AccountAddresses = () => {
   };
 
   const openEdit = (addr) => {
-    setEditingId(addr._id);
-    setForm({ ...addr });
+    setEditingId(addr.id);
+    setForm({ firstName: addr.firstName, lastName: addr.lastName, phone: addr.phone, address: addr.address, apartment: addr.apartment || '', city: addr.city, state: addr.state, pinCode: addr.pinCode, country: addr.country || 'India', isDefault: addr.isDefault });
     setErrors({});
     setShowModal(true);
   };
@@ -42,30 +53,36 @@ const AccountAddresses = () => {
     return Object.keys(e).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    if (form.isDefault) {
-      setAddresses(prev => prev.map(a => ({ ...a, isDefault: false })));
+    setSaving(true);
+    try {
+      if (editingId) {
+        await userService.updateAddress(editingId, form);
+      } else {
+        await userService.createAddress(form);
+      }
+      await fetchAddresses();
+      setShowModal(false);
+    } catch (err) {
+      setErrors({ general: err.message });
+    } finally {
+      setSaving(false);
     }
-    if (editingId) {
-      const updated = addresses.map(a => a._id === editingId ? { ...form, _id: editingId } : a);
-      saveAddresses(updated);
-    } else {
-      const newAddr = { ...form, _id: 'addr_' + Date.now() };
-      const updated = form.isDefault ? [...addresses.map(a => ({ ...a, isDefault: false })), newAddr] : [...addresses, newAddr];
-      saveAddresses(updated);
-    }
-    setShowModal(false);
   };
 
-  const handleDelete = (id) => {
-    const updated = addresses.filter(a => a._id !== id);
-    saveAddresses(updated);
+  const handleDelete = async (id) => {
+    try {
+      await userService.deleteAddress(id);
+      await fetchAddresses();
+    } catch { /* ignore */ }
   };
 
-  const handleSetDefault = (id) => {
-    const updated = addresses.map(a => ({ ...a, isDefault: a._id === id }));
-    saveAddresses(updated);
+  const handleSetDefault = async (id) => {
+    try {
+      await userService.setDefaultAddress(id);
+      await fetchAddresses();
+    } catch { /* ignore */ }
   };
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
@@ -80,7 +97,11 @@ const AccountAddresses = () => {
         </button>
       </div>
 
-      {addresses.length === 0 ? (
+      {loading ? (
+        <div className='border border-gray-200 p-[60px] text-center'>
+          <p className='font-[amma3] text-gray-400 text-[14px]'>Loading addresses...</p>
+        </div>
+      ) : addresses.length === 0 ? (
         <div className='border border-gray-200 p-[60px] text-center'>
           <i className='ri-map-pin-line text-[48px] text-gray-200 mb-[16px]'></i>
           <p className='font-[amma3] text-gray-400 text-[14px] mb-[20px]'>No saved addresses.</p>
@@ -91,7 +112,7 @@ const AccountAddresses = () => {
       ) : (
         <div className='grid grid-cols-1 md:grid-cols-2 gap-[16px]'>
           {addresses.map(addr => (
-            <div key={addr._id} className={`border p-[20px] ${addr.isDefault ? 'border-gray-900' : 'border-gray-200'} relative`}>
+            <div key={addr.id} className={`border p-[20px] ${addr.isDefault ? 'border-gray-900' : 'border-gray-200'} relative`}>
               {addr.isDefault && (
                 <span className='absolute top-[12px] right-[12px] px-[8px] py-[2px] bg-gray-900 text-white font-[amma3] text-[9px] uppercase tracking-[1px]'>Default</span>
               )}
@@ -104,9 +125,9 @@ const AccountAddresses = () => {
               <div className='flex gap-[8px] mt-[14px] pt-[14px] border-t border-gray-100'>
                 <button onClick={() => openEdit(addr)} className='font-[amma3] text-[11px] text-gray-500 hover:text-gray-900 uppercase tracking-[1px] transition-colors'>Edit</button>
                 {!addr.isDefault && (
-                  <button onClick={() => handleSetDefault(addr._id)} className='font-[amma3] text-[11px] text-gray-500 hover:text-gray-900 uppercase tracking-[1px] transition-colors ml-[12px]'>Set Default</button>
+                  <button onClick={() => handleSetDefault(addr.id)} className='font-[amma3] text-[11px] text-gray-500 hover:text-gray-900 uppercase tracking-[1px] transition-colors ml-[12px]'>Set Default</button>
                 )}
-                <button onClick={() => handleDelete(addr._id)} className='font-[amma3] text-[11px] text-red-400 hover:text-red-600 uppercase tracking-[1px] transition-colors ml-auto'>Delete</button>
+                <button onClick={() => handleDelete(addr.id)} className='font-[amma3] text-[11px] text-red-400 hover:text-red-600 uppercase tracking-[1px] transition-colors ml-auto'>Delete</button>
               </div>
             </div>
           ))}
@@ -118,6 +139,7 @@ const AccountAddresses = () => {
         <div className='fixed inset-0 z-[9999] flex items-center justify-center bg-black/40' onClick={() => setShowModal(false)}>
           <div className='bg-white p-[32px] max-w-[500px] w-[90%] max-h-[85vh] overflow-y-auto' onClick={e => e.stopPropagation()}>
             <h3 className='font-[amma4] text-gray-900 text-[16px] tracking-[1px] uppercase mb-[20px]'>{editingId ? 'Edit Address' : 'New Address'}</h3>
+            {errors.general && <div className='mb-[16px] p-[12px] bg-red-50 border border-red-200 text-red-700 font-[amma3] text-[13px] text-center'>{errors.general}</div>}
             <div className='space-y-[14px]'>
               <div className='grid grid-cols-2 gap-[12px] max-sm:grid-cols-1'>
                 <div>
@@ -173,8 +195,8 @@ const AccountAddresses = () => {
               </label>
             </div>
             <div className='flex gap-[12px] mt-[24px]'>
-              <button onClick={handleSave} className='flex-1 py-[12px] bg-gray-900 text-white font-[amma3] text-[11px] tracking-[3px] uppercase hover:bg-black transition-colors'>
-                {editingId ? 'Save Changes' : 'Add Address'}
+              <button onClick={handleSave} disabled={saving} className='flex-1 py-[12px] bg-gray-900 text-white font-[amma3] text-[11px] tracking-[3px] uppercase hover:bg-black transition-colors disabled:opacity-50'>
+                {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Add Address'}
               </button>
               <button onClick={() => setShowModal(false)} className='py-[12px] px-[20px] border border-gray-300 font-[amma3] text-[11px] tracking-[3px] uppercase text-gray-700 hover:border-gray-900 transition-colors'>
                 Cancel

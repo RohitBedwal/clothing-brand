@@ -1,17 +1,31 @@
-import React, { useContext } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { authContext } from '../../context/AuthContext'
 import { cartOpenContext } from '../../context/CartContext'
 import { wishlistContext } from '../../context/WishlistContext'
 import AccountLayout from '../../components/AccountLayout'
+import orderService from '../../services/orderService'
 
 const AccountDashboard = () => {
   const { currentUser } = useContext(authContext);
   const { cartItems } = useContext(cartOpenContext);
   const { wishlistItems } = useContext(wishlistContext);
-  const orders = JSON.parse(localStorage.getItem('echo_orders') || '[]');
-  const addresses = JSON.parse(localStorage.getItem('echo_addresses') || '[]');
-  const recentOrders = orders.slice(-3).reverse();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const res = await orderService.getOrders({ limit: 3 });
+        setOrders(res.orders || []);
+      } catch {
+        setOrders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
 
   return (
     <AccountLayout>
@@ -28,7 +42,6 @@ const AccountDashboard = () => {
           {[
             { label: 'Orders', value: orders.length, icon: 'ri-file-list-3-line', to: '/account/orders' },
             { label: 'Wishlist', value: wishlistItems.length, icon: 'ri-heart-line', to: '/account/wishlist' },
-            { label: 'Addresses', value: addresses.length, icon: 'ri-map-pin-line', to: '/account/addresses' },
             { label: 'Cart', value: cartItems.length, icon: 'ri-shopping-bag-line', to: '/cart' },
           ].map(item => (
             <Link key={item.label} to={item.to} className='border border-gray-200 p-[20px] text-center hover:border-gray-900 transition-colors'>
@@ -40,7 +53,7 @@ const AccountDashboard = () => {
         </div>
 
         {/* Quick Links */}
-        <div className='grid grid-cols-2 md:grid-cols-4 gap-[12px]'>
+        <div className='grid grid-cols-2 md:grid-cols-3 gap-[12px]'>
           {[
             { label: 'View Orders', to: '/account/orders', icon: 'ri-arrow-right-line' },
             { label: 'Wishlist', to: '/account/wishlist', icon: 'ri-arrow-right-line' },
@@ -61,7 +74,11 @@ const AccountDashboard = () => {
             {orders.length > 0 && <Link to='/account/orders' className='font-[amma3] text-[12px] text-gray-500 hover:text-gray-900 underline underline-offset-2'>View All</Link>}
           </div>
 
-          {recentOrders.length === 0 ? (
+          {loading ? (
+            <div className='border border-gray-200 p-[40px] text-center'>
+              <p className='font-[amma3] text-gray-400 text-[13px]'>Loading...</p>
+            </div>
+          ) : orders.length === 0 ? (
             <div className='border border-gray-200 p-[40px] text-center'>
               <p className='font-[amma3] text-gray-400 text-[13px] mb-[16px]'>You haven't placed any orders yet.</p>
               <Link to='/collections' className='inline-block py-[12px] px-[28px] bg-gray-900 text-white font-[amma3] text-[11px] tracking-[3px] uppercase hover:bg-black transition-colors'>
@@ -70,19 +87,19 @@ const AccountDashboard = () => {
             </div>
           ) : (
             <div className='space-y-[12px]'>
-              {recentOrders.map(order => (
+              {orders.map(order => (
                 <Link key={order.id} to={`/account/orders/${order.id}`} className='flex items-center justify-between border border-gray-200 p-[16px] hover:border-gray-900 transition-colors'>
                   <div>
-                    <p className='font-[amma4] text-gray-900 text-[13px]'>#{order.id}</p>
+                    <p className='font-[amma4] text-gray-900 text-[13px]'>#{order.orderNumber || order.id.slice(0, 8)}</p>
                     <p className='font-[amma3] text-gray-500 text-[12px] mt-[2px]'>
-                      {new Date(order.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} &middot; {order.items.length} item{order.items.length > 1 ? 's' : ''}
+                      {new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} &middot; {order.items?.length || 0} item{(order.items?.length || 0) > 1 ? 's' : ''}
                     </p>
                   </div>
                   <div className='text-right'>
-                    <p className='font-[amma4] text-gray-900 text-[13px]'>₹{order.total.toLocaleString('en-IN')}</p>
+                    <p className='font-[amma4] text-gray-900 text-[13px]'>₹{Number(order.total).toLocaleString('en-IN')}</p>
                     <span className={`inline-block mt-[4px] px-[8px] py-[2px] font-[amma3] text-[10px] uppercase tracking-[1px] ${
-                      order.status === 'Delivered' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                    }`}>{order.status}</span>
+                      order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                    }`}>{order.status?.replace(/_/g, ' ')}</span>
                   </div>
                 </Link>
               ))}

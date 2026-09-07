@@ -1,9 +1,10 @@
 import React, { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { cartOpenContext } from '../context/CartContext'
+import { formatPrice } from '../src/utils/formatPrice'
 import NavBar2 from '../components/NavBar2'
 
-const FREE_SHIPPING_THRESHOLD = 150;
+const FREE_SHIPPING_THRESHOLD = 15000;
 
 const CartPage = () => {
   const navigate = useNavigate();
@@ -11,6 +12,14 @@ const CartPage = () => {
 
   const progressPercent = Math.min((subtotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
   const hasFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
+
+  const getItemName = (item) => item.variant?.product?.name || item.product_name || item.name || 'Product';
+  const getItemImage = (item) => item.variant?.product?.images?.[0]?.url || item.image_url || item.image || '/placeholder.png';
+  const getItemPrice = (item) => Number(item.variant?.price || item.price || 0);
+  const getItemColor = (item) => item.variant?.color || item.selectedColor || '';
+  const getItemSize = (item) => item.variant?.size || item.selectedSize || '';
+  const getItemQty = (item) => item.quantity || item.count || 1;
+  const getItemId = (item) => item.id || item._id || item.variantId;
 
   if (cartItems.length === 0) {
     return (
@@ -46,66 +55,66 @@ const CartPage = () => {
               Bag ({totalQuantity})
             </h1>
 
-            {/* Column Labels */}
             <div className='flex justify-between pb-[12px] border-b border-gray-200 mb-[20px]'>
               <span className='font-[amma3] text-[11px] text-gray-400 uppercase tracking-[2px]'>Product</span>
               <span className='font-[amma3] text-[11px] text-gray-400 uppercase tracking-[2px]'>Total</span>
             </div>
 
-            {/* Cart Items */}
             {cartItems.map((item) => {
-              const price = typeof item.price === 'number' ? item.price : 0;
-              const itemTotal = price * (item.count || 1);
-              const itemId = item._id || item.id;
+              const id = getItemId(item);
+              const price = getItemPrice(item);
+              const qty = getItemQty(item);
+              const itemTotal = price * qty;
 
               return (
-                <div key={itemId} className='flex gap-[20px] py-[24px] border-b border-gray-100'>
-                  {/* Thumbnail */}
+                <div key={id} className='flex gap-[20px] py-[24px] border-b border-gray-100'>
                   <div className='w-[100px] h-[130px] flex-shrink-0 bg-gray-50 overflow-hidden'>
                     <img
-                      src={item.image_url || item.image}
-                      alt={item.product_name || item.name}
+                      src={getItemImage(item)}
+                      alt={getItemName(item)}
                       className='w-full h-full object-cover'
                     />
                   </div>
 
-                  {/* Info + Total */}
                   <div className='flex-1 flex justify-between'>
                     <div className='flex flex-col gap-[4px]'>
                       <h3 className='font-[amma4] text-[13px] text-gray-900 uppercase tracking-[1px]'>
-                        {item.product_name || item.name}
+                        {getItemName(item)}
                       </h3>
-                      <p className='font-[amma3] text-[11px] text-gray-400'>
-                        Color: <span className='text-gray-600'>{item.selectedColor || 'Default'}</span>
-                      </p>
-                      <p className='font-[amma3] text-[11px] text-gray-400'>
-                        Size: <span className='text-gray-600'>{item.selectedSize || 'M'}</span>
-                      </p>
+                      {getItemColor(item) && (
+                        <p className='font-[amma3] text-[11px] text-gray-400'>
+                          Color: <span className='text-gray-600'>{getItemColor(item)}</span>
+                        </p>
+                      )}
+                      {getItemSize(item) && (
+                        <p className='font-[amma3] text-[11px] text-gray-400'>
+                          Size: <span className='text-gray-600'>{getItemSize(item)}</span>
+                        </p>
+                      )}
                       <p className='font-[amma3] text-[12px] text-gray-600 mt-[4px]'>
-                        Rs. {price.toLocaleString()}.00
+                        ₹{price.toLocaleString('en-IN')}
                       </p>
 
-                      {/* Quantity Controls */}
                       <div className='flex items-center gap-[12px] mt-[10px]'>
                         <div className='inline-flex items-center border border-gray-300'>
                           <button
-                            onClick={() => decreaseCount(itemId)}
+                            onClick={() => decreaseCount(id)}
                             className='w-[34px] h-[34px] flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors text-[14px]'
                           >
                             −
                           </button>
                           <span className='w-[40px] h-[34px] flex items-center justify-center font-[amma3] text-[13px] text-gray-900 border-x border-gray-300'>
-                            {item.count || 1}
+                            {qty}
                           </span>
                           <button
-                            onClick={() => increaseCount(itemId)}
+                            onClick={() => increaseCount(id)}
                             className='w-[34px] h-[34px] flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors text-[14px]'
                           >
                             +
                           </button>
                         </div>
                         <button
-                          onClick={() => deleteItem(itemId)}
+                          onClick={() => deleteItem(id)}
                           className='text-gray-400 hover:text-red-500 transition-colors'
                         >
                           <i className="ri-delete-bin-line text-[16px]"></i>
@@ -113,10 +122,9 @@ const CartPage = () => {
                       </div>
                     </div>
 
-                    {/* Item Total */}
                     <div className='text-right'>
                       <span className='font-[amma3] text-[13px] text-gray-900'>
-                        Rs. {itemTotal.toLocaleString()}.00
+                        ₹{itemTotal.toLocaleString('en-IN')}
                       </span>
                     </div>
                   </div>
@@ -124,7 +132,6 @@ const CartPage = () => {
               );
             })}
 
-            {/* Continue Shopping */}
             <div className='mt-[30px]'>
               <button
                 onClick={() => navigate('/')}
@@ -142,12 +149,11 @@ const CartPage = () => {
           <div className='w-full lg:w-[40%] lg:pl-[20px]'>
             <div className='lg:sticky lg:top-[100px] lg:self-start'>
 
-              {/* Free Shipping */}
               <div className='mb-[28px]'>
                 <p className='font-[amma3] text-[12px] text-gray-600 mb-[10px]'>
                   {hasFreeShipping
                     ? "Congratulations! You've got free shipping."
-                    : `Add Rs. ${(FREE_SHIPPING_THRESHOLD - subtotal).toLocaleString()} more for free shipping.`
+                    : `Add ₹${(FREE_SHIPPING_THRESHOLD - subtotal).toLocaleString('en-IN')} more for free shipping.`
                   }
                 </p>
                 <div className='w-full h-[3px] bg-gray-100 rounded-full overflow-hidden'>
@@ -161,11 +167,7 @@ const CartPage = () => {
               <div className='border-t border-gray-200 pt-[20px] mb-[20px]'>
                 <div className='flex justify-between mb-[12px]'>
                   <span className='font-[amma3] text-[13px] text-gray-900 uppercase tracking-[1px]'>Bag total</span>
-                  <span className='font-[amma4] text-[14px] text-gray-900'>Rs. {subtotal.toLocaleString()}.00</span>
-                </div>
-                <div className='flex justify-between mb-[12px]'>
-                  <span className='font-[amma3] text-[13px] text-gray-900 uppercase tracking-[1px]'>Subtotal</span>
-                  <span className='font-[amma4] text-[14px] text-gray-900'>Rs. {subtotal.toLocaleString()}.00</span>
+                  <span className='font-[amma4] text-[14px] text-gray-900'>₹{subtotal.toLocaleString('en-IN')}</span>
                 </div>
               </div>
 
@@ -173,15 +175,13 @@ const CartPage = () => {
                 Tax included. Shipping calculated at checkout.
               </p>
 
-              {/* Checkout Button */}
-              <button 
+              <button
                 onClick={() => navigate('/checkout')}
                 className='w-full py-[15px] bg-gray-900 text-white font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black transition-colors mb-[28px]'
               >
                 Checkout
               </button>
 
-              {/* Order Note */}
               <div className='border-t border-gray-200 pt-[24px] mb-[24px]'>
                 <p className='font-[amma3] text-[11px] text-gray-900 uppercase tracking-[2px] mb-[6px]'>Order Note</p>
                 <p className='font-[amma3] text-[11px] text-gray-400 mb-[10px]'>Add a note to your order</p>

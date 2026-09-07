@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { quickViewContext } from '../context/QuickViewContext'
 import { cartOpenContext } from '../context/CartContext'
+import { formatPrice } from '../src/utils/formatPrice'
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=800&h=1000&fit=crop",
@@ -48,9 +49,8 @@ const QuickView = () => {
   const colors = product.colors || ["Silver", "Charcoal", "Navy"];
   const sizes = product.sizes || ["XS", "S", "M", "L", "XL"];
   const description = product.description || "Crafted with precision and attention to detail, this piece embodies contemporary elegance. Made from premium materials for lasting comfort and style.";
-  const price = typeof product.price === 'number'
-    ? `Rs. ${product.price.toLocaleString()}.00`
-    : product.price || "Rs. 0.00";
+  const price = Number(product.price) || 0;
+  const priceFormatted = formatPrice(price);
 
   const handleMoreDetails = () => {
     closeQuickView();
@@ -140,7 +140,7 @@ const QuickView = () => {
           </h2>
 
           <div className='flex items-baseline gap-[10px] mb-[4px]'>
-            <span className='font-[amma3] text-[18px] text-gray-900'>{price}</span>
+            <span className='font-[amma3] text-[18px] text-gray-900'>{priceFormatted}</span>
           </div>
           <p className='font-[amma3] text-[11px] text-gray-400 mb-[20px]'>Tax included.</p>
 
@@ -236,6 +236,8 @@ const QuickView = () => {
                 addToCart({
                   ...product,
                   _id: product.id,
+                  selectedSize,
+                  selectedColor,
                   image_url: images[0],
                   product_name: product.name,
                   brands: product.brand || "ECHO STUDIO"

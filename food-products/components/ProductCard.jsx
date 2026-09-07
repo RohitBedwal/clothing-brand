@@ -1,37 +1,13 @@
-import React, { useContext, useState, useRef, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import React, { useContext, useState, useRef, useEffect, useMemo } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { cartOpenContext } from '../context/CartContext';
+import { formatPrice, formatPriceCompact } from '../src/utils/formatPrice';
 
-const defaultProduct = {
-  name: "ECHO GEMME JACKET",
-  brand: "ECHO STUDIO",
-  price: 25000,
-  originalPrice: null,
-  images: [
-    "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=800&h=1000&fit=crop",
-    "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&h=1000&fit=crop",
-    "https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?w=800&h=1000&fit=crop",
-    "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800&h=1000&fit=crop",
-    "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=800&h=1000&fit=crop"
-  ],
-  category: "Women > Jackets",
-  description: "The ECHO GEMME JACKET embodies timeless elegance with a modern silhouette. Crafted from premium Italian wool blend fabric, this jacket features a structured shoulder line, single-button closure, and a tailored fit that flatters every body type. The luxurious satin lining ensures comfort while the meticulous stitching speaks to our commitment to quality craftsmanship.",
-  deliveryDetail: "Complimentary express shipping on all orders. Standard delivery: 5-7 business days. Express delivery: 2-3 business days. International shipping available to select countries. You will receive a tracking number via email once your order has been dispatched.",
-  productDetails: [
-    "Premium Italian Wool Blend",
-    "Fully Satin Lined",
-    "Single-Breasted Closure",
-    "Notch Lapel Collar",
-    "Two Front Pockets",
-    "Dry Clean Only",
-    "Made in Italy",
-    "Model wears size M"
-  ],
-  returnsExchange: "We offer hassle-free returns within 30 days of purchase. Items must be unworn with all tags attached. Free return shipping provided. Exchanges are subject to availability. Custom-sized items are final sale. Please contact our support team to initiate a return.",
-  tags: ["Designer Jacket", "Gemme Jacket", "Italian Wool", "Luxury Outerwear"],
-  colors: ["Silver", "Charcoal", "Navy", "Ivory"],
-  sizes: ["XS", "S", "M", "L", "XL"]
-};
+const fallbackImages = [
+  "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=800&h=1000&fit=crop",
+  "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&h=1000&fit=crop",
+  "https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?w=800&h=1000&fit=crop",
+];
 
 const Accordion = ({ title, children, isOpen, onToggle }) => {
   const contentRef = useRef(null);
@@ -71,24 +47,58 @@ const Accordion = ({ title, children, isOpen, onToggle }) => {
 const ProductCard = () => {
   const { setCart, addToCart } = useContext(cartOpenContext)
   const location = useLocation();
-  const passedProduct = location.state?.product;
-  
-  const fashionProduct = passedProduct ? {
-    ...defaultProduct,
-    name: passedProduct.name || defaultProduct.name,
-    brand: passedProduct.brand || defaultProduct.brand,
-    price: passedProduct.price || defaultProduct.price,
-    originalPrice: passedProduct.originalPrice || defaultProduct.originalPrice,
-    images: passedProduct.image ? [passedProduct.image, ...defaultProduct.images.slice(1)] : defaultProduct.images,
-  } : defaultProduct;
+  const navigate = useNavigate();
+  const rawProduct = location.state?.product;
 
-  const [selectedSize, setSelectedSize] = useState("XL");
-  const [selectedColor, setSelectedColor] = useState("Silver");
+  const product = useMemo(() => {
+    if (!rawProduct) return null;
+    const imgs = Array.isArray(rawProduct.images)
+      ? rawProduct.images.map(img => typeof img === 'string' ? img : img.url).filter(Boolean)
+      : [];
+    const variants = Array.isArray(rawProduct.variants) ? rawProduct.variants : [];
+    const colors = [...new Set(variants.map(v => v.color).filter(Boolean))];
+    const sizes = [...new Set(variants.map(v => v.size).filter(Boolean))];
+    return {
+      ...rawProduct,
+      normalizedImages: imgs.length > 0 ? imgs : fallbackImages,
+      variants,
+      colors: colors.length > 0 ? colors : ["Default"],
+      sizes: sizes.length > 0 ? sizes : ["M"],
+      price: Number(rawProduct.price) || 0,
+      compareAtPrice: rawProduct.compareAtPrice ? Number(rawProduct.compareAtPrice) : null,
+    };
+  }, [rawProduct]);
+
+  if (!product) {
+    return (
+      <div className='w-full bg-white min-h-screen'>
+        <div className='pt-[120px] pb-[80px] flex flex-col items-center'>
+          <p className='font-[amma3] text-[14px] text-gray-500 mb-[24px]'>Product not found.</p>
+          <button onClick={() => navigate('/')} className='px-[32px] py-[12px] bg-gray-900 text-white font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black transition-colors'>
+            Go Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const [selectedSize, setSelectedSize] = useState(product.sizes[0] || "M");
+  const [selectedColor, setSelectedColor] = useState(product.colors[0] || "Default");
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [openAccordion, setOpenAccordion] = useState('description');
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+
+  const matchedVariant = useMemo(() => {
+    if (!product.variants.length) return null;
+    return product.variants.find(v =>
+      v.size === selectedSize && v.color === selectedColor
+    ) || product.variants.find(v => v.size === selectedSize) || product.variants.find(v => v.color === selectedColor) || product.variants[0];
+  }, [product.variants, selectedSize, selectedColor]);
+
+  const displayPrice = matchedVariant ? Number(matchedVariant.price) : product.price;
+  const hasDiscount = product.compareAtPrice && product.compareAtPrice > displayPrice;
 
   const handleMouseMove = (e) => {
     if (!isZoomed) return;
@@ -102,7 +112,17 @@ const ProductCard = () => {
     setOpenAccordion(openAccordion === name ? null : name);
   };
 
-  return (
+  const handleAddToCart = () => {
+    addToCart({
+      ...product,
+      selectedSize,
+      selectedColor,
+      price: displayPrice,
+    });
+    setCart(true);
+  };
+
+    return (
     <div className='w-full bg-white min-h-screen'>
       <div className='pt-[90px] pb-[60px] px-[30px] max-md:px-[16px] flex flex-col items-center w-full'>
         <div className='max-w-[1300px] w-full flex flex-col lg:flex-row gap-[50px] relative'>
@@ -113,7 +133,7 @@ const ProductCard = () => {
 
               {/* Thumbnails */}
               <div className='hidden md:flex flex-col gap-[10px] w-[70px] flex-shrink-0'>
-                {fashionProduct.images.map((img, idx) => (
+                {product.normalizedImages.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
@@ -121,11 +141,7 @@ const ProductCard = () => {
                       selectedImage === idx ? 'border-gray-900' : 'border-gray-200 hover:border-gray-400'
                     }`}
                   >
-                    <img
-                      src={img}
-                      alt={`Thumbnail ${idx + 1}`}
-                      className='w-full h-full object-cover'
-                    />
+                    <img src={img} alt={product.name} className='w-full h-full object-cover' />
                   </button>
                 ))}
               </div>
@@ -139,24 +155,19 @@ const ProductCard = () => {
                   onMouseLeave={() => setIsZoomed(false)}
                 >
                   <img
-                    src={fashionProduct.images[selectedImage]}
-                    alt={fashionProduct.name}
+                    src={product.normalizedImages[selectedImage] || product.normalizedImages[0]}
+                    alt={product.name}
                     className='w-full h-full object-cover transition-transform duration-200'
-                    style={isZoomed ? {
-                      transform: 'scale(2)',
-                      transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`
-                    } : {}}
+                    style={isZoomed ? { transform: 'scale(2)', transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` } : {}}
                   />
-
-                  {/* Zoom Icon */}
                   <div className='absolute bottom-[16px] right-[16px] w-[40px] h-[40px] bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm'>
                     <i className="ri-search-line text-[16px] text-gray-600"></i>
                   </div>
                 </div>
 
-                {/* Mobile Thumbnails - Horizontal Scroll */}
+                {/* Mobile Thumbnails */}
                 <div className='flex md:hidden gap-[8px] mt-[10px] overflow-x-auto pb-[4px]'>
-                  {fashionProduct.images.map((img, idx) => (
+                  {product.normalizedImages.map((img, idx) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedImage(idx)}
@@ -164,7 +175,7 @@ const ProductCard = () => {
                         selectedImage === idx ? 'border-gray-900' : 'border-gray-200'
                       }`}
                     >
-                      <img src={img} alt={`Thumbnail ${idx + 1}`} className='w-full h-full object-cover' />
+                      <img src={img} alt={product.name} className='w-full h-full object-cover' />
                     </button>
                   ))}
                 </div>
@@ -175,15 +186,32 @@ const ProductCard = () => {
           {/* RIGHT COLUMN — PRODUCT INFO */}
           <div className='w-full lg:w-[45%] flex flex-col pr-[20px] max-md:pr-0'>
 
+            {/* Category */}
+            {product.category?.name && (
+              <p className='font-[amma3] text-[10px] text-gray-400 uppercase tracking-[3px] mb-[8px]'>
+                {product.category.name}
+              </p>
+            )}
+
             {/* Product Title & Price */}
             <div className='mb-[28px]'>
               <h1 className='font-[amma4] text-[24px] md:text-[30px] text-gray-900 tracking-[4px] uppercase mb-[12px] leading-tight'>
-                {fashionProduct.name}
+                {product.name}
               </h1>
               <div className='flex items-baseline gap-[12px] mb-[6px]'>
-                <span className='font-[amma3] text-[22px] text-gray-900'>Rs. {fashionProduct.price.toLocaleString()}.00</span>
+                <span className='font-[amma3] text-[22px] text-gray-900'>{formatPrice(displayPrice)}</span>
+                {hasDiscount && (
+                  <span className='font-[amma3] text-[16px] text-gray-400 line-through'>
+                    {formatPrice(product.compareAtPrice)}
+                  </span>
+                )}
               </div>
-              <p className='font-[amma3] text-[12px] text-gray-400'>Tax included.</p>
+              {matchedVariant && (
+                <p className='font-[amma3] text-[11px] text-gray-400 mt-[2px]'>
+                  {matchedVariant.stock > 0 ? `${matchedVariant.stock} in stock` : 'Out of stock'}
+                </p>
+              )}
+              <p className='font-[amma3] text-[12px] text-gray-400 mt-[4px]'>Tax included.</p>
             </div>
 
             <div className='h-[1px] bg-gray-200 mb-[16px]'></div>
@@ -197,48 +225,59 @@ const ProductCard = () => {
             </div>
 
             {/* Color Selection */}
-            <div className='mb-[28px]'>
-              <p className='font-[amma3] text-[12px] text-gray-500 uppercase tracking-[2px] mb-[10px]'>
-                Color: <span className='text-gray-900'>{selectedColor}</span>
-              </p>
-              <div className='flex gap-[8px]'>
-                {fashionProduct.colors.map(color => (
-                  <button
-                    key={color}
-                    onClick={() => setSelectedColor(color)}
-                    className={`px-[16px] py-[8px] border text-[12px] font-[amma3] tracking-[1px] transition-all ${
-                      selectedColor === color
-                        ? 'border-gray-900 bg-gray-900 text-white'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    {color}
-                  </button>
-                ))}
+            {product.colors.length > 0 && !(product.colors.length === 1 && product.colors[0] === "Default") && (
+              <div className='mb-[28px]'>
+                <p className='font-[amma3] text-[12px] text-gray-500 uppercase tracking-[2px] mb-[10px]'>
+                  Color: <span className='text-gray-900'>{selectedColor}</span>
+                </p>
+                <div className='flex gap-[8px]'>
+                  {product.colors.map(color => (
+                    <button
+                      key={color}
+                      onClick={() => setSelectedColor(color)}
+                      className={`px-[16px] py-[8px] border text-[12px] font-[amma3] tracking-[1px] transition-all ${
+                        selectedColor === color
+                          ? 'border-gray-900 bg-gray-900 text-white'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                      }`}
+                    >
+                      {color}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Size Selection */}
-            <div className='mb-[28px]'>
-              <p className='font-[amma3] text-[12px] text-gray-500 uppercase tracking-[2px] mb-[10px]'>
-                Size: <span className='text-gray-900'>{selectedSize}</span>
-              </p>
-              <div className='flex gap-[8px]'>
-                {fashionProduct.sizes.map(size => (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`w-[50px] h-[46px] border flex items-center justify-center text-[12px] font-[amma3] tracking-[1px] transition-all ${
-                      selectedSize === size
-                        ? 'border-gray-900 bg-gray-900 text-white'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
+            {product.sizes.length > 0 && !(product.sizes.length === 1 && product.sizes[0] === "M") && (
+              <div className='mb-[28px]'>
+                <p className='font-[amma3] text-[12px] text-gray-500 uppercase tracking-[2px] mb-[10px]'>
+                  Size: <span className='text-gray-900'>{selectedSize}</span>
+                </p>
+                <div className='flex gap-[8px]'>
+                  {product.sizes.map(size => {
+                    const variantForSize = product.variants.find(v => v.size === size && v.color === selectedColor);
+                    const outOfStock = variantForSize && variantForSize.stock <= 0;
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => !outOfStock && setSelectedSize(size)}
+                        disabled={outOfStock}
+                        className={`w-[50px] h-[46px] border flex items-center justify-center text-[12px] font-[amma3] tracking-[1px] transition-all ${
+                          selectedSize === size
+                            ? 'border-gray-900 bg-gray-900 text-white'
+                            : outOfStock
+                            ? 'border-gray-100 text-gray-300 cursor-not-allowed line-through'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Custom Size */}
             <div className='mb-[16px]'>
@@ -280,16 +319,7 @@ const ProductCard = () => {
             {/* Purchase Buttons */}
             <div className='flex gap-[12px] mb-[12px]'>
               <button
-                onClick={() => {
-                  addToCart({
-                    ...fashionProduct,
-                    _id: 1,
-                    image_url: fashionProduct.images[0],
-                    product_name: fashionProduct.name,
-                    brands: fashionProduct.brand
-                  });
-                  setCart(true);
-                }}
+                onClick={handleAddToCart}
                 className='flex-1 py-[15px] bg-gray-900 text-white font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black transition-colors'
               >
                 Add to Bag
@@ -300,7 +330,7 @@ const ProductCard = () => {
             </div>
 
             {/* Wishlist */}
-            <button className='w-full py-[14px] border border-gray-200 text-gray-600 font-[amma3] text-[12px] tracking-[2px] uppercase hover:border-gray-400 hover:text-gray-900 transition-all mb-[24px] flex items-center justify-center gap-[8px]'>
+            <button className='w-full py-[14px] border border-gray-200 text-gray-600 font-[amma3] text-[12px] text-[2px] uppercase hover:border-gray-400 hover:text-gray-900 transition-all mb-[24px] flex items-center justify-center gap-[8px]'>
               <i className="ri-heart-line text-[14px]"></i>
               Add to Wishlist
             </button>
@@ -329,45 +359,59 @@ const ProductCard = () => {
             <div className='mb-[32px]'>
               <Accordion title="Description" isOpen={openAccordion === 'description'} onToggle={() => toggleAccordion('description')}>
                 <p className='font-[amma3] text-[13px] text-gray-600 leading-[1.9]'>
-                  {fashionProduct.description}
+                  {product.description || "No description available."}
                 </p>
               </Accordion>
 
               <Accordion title="Delivery Detail" isOpen={openAccordion === 'delivery'} onToggle={() => toggleAccordion('delivery')}>
                 <p className='font-[amma3] text-[13px] text-gray-600 leading-[1.9]'>
-                  {fashionProduct.deliveryDetail}
+                  Complimentary express shipping on all orders. Standard delivery: 5-7 business days. Express delivery: 2-3 business days. You will receive a tracking number via email once your order has been dispatched.
                 </p>
               </Accordion>
 
               <Accordion title="Product Details" isOpen={openAccordion === 'details'} onToggle={() => toggleAccordion('details')}>
                 <ul className='space-y-[8px]'>
-                  {fashionProduct.productDetails.map((detail, idx) => (
-                    <li key={idx} className='font-[amma3] text-[13px] text-gray-600 flex items-start gap-[8px]'>
+                  {product.category?.name && (
+                    <li className='font-[amma3] text-[13px] text-gray-600 flex items-start gap-[8px]'>
                       <span className='text-gray-300 mt-[2px]'>•</span>
-                      {detail}
+                      Category: {product.category.name}
                     </li>
-                  ))}
+                  )}
+                  {matchedVariant && (
+                    <>
+                      <li className='font-[amma3] text-[13px] text-gray-600 flex items-start gap-[8px]'>
+                        <span className='text-gray-300 mt-[2px]'>•</span>
+                        SKU: {matchedVariant.sku}
+                      </li>
+                      <li className='font-[amma3] text-[13px] text-gray-600 flex items-start gap-[8px]'>
+                        <span className='text-gray-300 mt-[2px]'>•</span>
+                        Color: {matchedVariant.color} | Size: {matchedVariant.size}
+                      </li>
+                    </>
+                  )}
                 </ul>
               </Accordion>
 
               <Accordion title="Returns and Exchange" isOpen={openAccordion === 'returns'} onToggle={() => toggleAccordion('returns')}>
                 <p className='font-[amma3] text-[13px] text-gray-600 leading-[1.9]'>
-                  {fashionProduct.returnsExchange}
+                  We offer hassle-free returns within 30 days of purchase. Items must be unworn with all tags attached. Free return shipping provided. Exchanges are subject to availability. Custom-sized items are final sale. Please contact our support team to initiate a return.
                 </p>
               </Accordion>
             </div>
 
             {/* Tags */}
-            <div className='mb-[24px]'>
-              <p className='font-[amma3] text-[12px] text-gray-500'>
-                Tags:{' '}
-                {fashionProduct.tags.map((tag, idx) => (
-                  <span key={idx} className='text-gray-700'>
-                    {tag}{idx < fashionProduct.tags.length - 1 ? ', ' : ''}
-                  </span>
-                ))}
-              </p>
-            </div>
+            {product.tags && product.tags.length > 0 && (
+              <div className='mb-[24px]'>
+                <p className='font-[amma3] text-[12px] text-gray-500'>
+                  Tags:{' '}
+                  {product.tags.map((tag, idx) => (
+                    <span key={idx} className='text-gray-700'>
+                      {tag}{idx < product.tags.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </p>
+              </div>
+            )}
 
             {/* Social Icons */}
             <div className='flex gap-[12px] mb-[28px]'>

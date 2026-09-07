@@ -15,7 +15,6 @@ import ProductDetails from '../pages/ProductDetails';
 import SearchName from '../pages/SearchName';
 import CategoryContext from '../context/CategoryContext';
 import ProductByCategory from '../pages/ProductByCategory';
-import ProductsByCategoryContext from '../context/ProductsByCategoryContext';
 import CartContext from '../context/CartContext';
 import QuickViewProvider from '../context/QuickViewContext';
 import AuthProvider from '../context/AuthContext';
@@ -51,11 +50,10 @@ import SizeGuidePage from '../pages/SizeGuidePage';
 const App = () => {
 
   return (
-      <CartContext>
-    <ProductsByCategoryContext>
+      <AuthProvider>
+   <CartContext>
+    <WishlistProvider>
    <QuickViewProvider>
-   <AuthProvider>
-   <WishlistProvider>
 
    <CategoryContext>
 
@@ -105,11 +103,10 @@ const App = () => {
     <Footer />
    </BrowserRouter>
    </CategoryContext>
-   </WishlistProvider>
-   </AuthProvider>
    </QuickViewProvider>
-    </ProductsByCategoryContext>
-      </CartContext>
+   </WishlistProvider>
+    </CartContext>
+    </AuthProvider>
   )
 }
 

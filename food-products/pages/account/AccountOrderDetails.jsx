@@ -1,29 +1,69 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import AccountLayout from '../../components/AccountLayout'
+import orderService from '../../services/orderService'
 
-const TRACKING_STEPS = ['Order Placed', 'Confirmed', 'Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
+const TRACKING_STEPS = ['PENDING', 'CONFIRMED', 'PROCESSING', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 
 const getStatusColor = (status) => {
   const colors = {
-    Pending: 'bg-yellow-100 text-yellow-700',
-    Confirmed: 'bg-blue-100 text-blue-700',
-    Processing: 'bg-indigo-100 text-indigo-700',
-    Packed: 'bg-purple-100 text-purple-700',
-    Shipped: 'bg-cyan-100 text-cyan-700',
-    'Out for Delivery': 'bg-orange-100 text-orange-700',
-    Delivered: 'bg-green-100 text-green-700',
-    Cancelled: 'bg-red-100 text-red-700',
+    PENDING: 'bg-yellow-100 text-yellow-700',
+    CONFIRMED: 'bg-blue-100 text-blue-700',
+    PROCESSING: 'bg-indigo-100 text-indigo-700',
+    PACKED: 'bg-purple-100 text-purple-700',
+    SHIPPED: 'bg-cyan-100 text-cyan-700',
+    OUT_FOR_DELIVERY: 'bg-orange-100 text-orange-700',
+    DELIVERED: 'bg-green-100 text-green-700',
+    CANCELLED: 'bg-red-100 text-red-700',
   };
   return colors[status] || 'bg-gray-100 text-gray-700';
 };
 
+const formatStatus = (status) => status?.replace(/_/g, ' ') || 'Unknown';
+
 const AccountOrderDetails = () => {
   const { orderId } = useParams();
-  const orders = JSON.parse(localStorage.getItem('echo_orders') || '[]');
-  const order = orders.find(o => o.id === orderId);
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelled, setCancelled] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        const res = await orderService.getOrderById(orderId);
+        setOrder(res);
+      } catch {
+        setOrder(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrder();
+  }, [orderId]);
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      const res = await orderService.cancelOrder(orderId);
+      setOrder(res);
+      setShowCancelModal(false);
+    } catch {
+      /* ignore */
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AccountLayout>
+        <div className='border border-gray-200 p-[60px] text-center'>
+          <p className='font-[amma3] text-gray-400 text-[14px]'>Loading order details...</p>
+        </div>
+      </AccountLayout>
+    );
+  }
 
   if (!order) {
     return (
@@ -39,31 +79,24 @@ const AccountOrderDetails = () => {
   }
 
   const currentStep = TRACKING_STEPS.indexOf(order.status);
-  const isDelivered = order.status === 'Delivered';
-  const canCancel = ['Pending', 'Confirmed'].includes(order.status) && !cancelled;
+  const isDelivered = order.status === 'DELIVERED';
+  const canCancel = ['PENDING', 'CONFIRMED'].includes(order.status);
 
-  const handleCancel = () => {
-    const updated = orders.map(o => o.id === orderId ? { ...o, status: 'Cancelled' } : o);
-    localStorage.setItem('echo_orders', JSON.stringify(updated));
-    setShowCancelModal(false);
-    setCancelled(true);
-  };
+  const addr = order.shippingAddressSnapshot;
 
   return (
     <AccountLayout>
       <div className='space-y-[32px]'>
         <div className='flex items-start justify-between max-sm:flex-col max-sm:gap-[12px]'>
           <div>
-            <h2 className='font-[amma4] text-gray-900 text-[16px] tracking-[2px] uppercase'>#{order.id}</h2>
+            <h2 className='font-[amma4] text-gray-900 text-[16px] tracking-[2px] uppercase'>#{order.orderNumber || order.id.slice(0, 8)}</h2>
             <p className='font-[amma3] text-gray-500 text-[12px] mt-[4px]'>
-              Placed on {new Date(order.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+              Placed on {new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           </div>
           <div className='flex items-center gap-[12px]'>
-            <span className={`px-[12px] py-[4px] font-[amma3] text-[11px] uppercase tracking-[1px] ${getStatusColor(order.status)}`}>{order.status}</span>
-            <span className='px-[12px] py-[4px] font-[amma3] text-[11px] uppercase tracking-[1px] bg-gray-100 text-gray-600'>
-              {order.paymentMethod === 'cod' ? 'COD' : 'Paid'}
-            </span>
+            <span className={`px-[12px] py-[4px] font-[amma3] text-[11px] uppercase tracking-[1px] ${getStatusColor(order.status)}`}>{formatStatus(order.status)}</span>
+            <span className='px-[12px] py-[4px] font-[amma3] text-[11px] uppercase tracking-[1px] bg-gray-100 text-gray-600'>Paid</span>
           </div>
         </div>
 
@@ -81,7 +114,7 @@ const AccountOrderDetails = () => {
                     {i < TRACKING_STEPS.length - 1 && <div className={`w-[1px] h-[28px] ${isActive ? 'bg-gray-900' : 'bg-gray-200'}`}></div>}
                   </div>
                   <div className='pb-[14px]'>
-                    <p className={`font-[amma3] text-[13px] ${isActive ? 'text-gray-900 font-[amma4]' : 'text-gray-400'}`}>{step}</p>
+                    <p className={`font-[amma3] text-[13px] ${isActive ? 'text-gray-900 font-[amma4]' : 'text-gray-400'}`}>{formatStatus(step)}</p>
                   </div>
                 </div>
               );
@@ -93,18 +126,18 @@ const AccountOrderDetails = () => {
         <div className='border border-gray-200 p-[24px]'>
           <h3 className='font-[amma4] text-gray-900 text-[13px] tracking-[2px] uppercase mb-[16px]'>Products</h3>
           <div className='space-y-[12px]'>
-            {order.items.map((item, i) => (
+            {(order.items || []).map((item, i) => (
               <div key={i} className='flex items-center gap-[14px] pb-[12px] border-b border-gray-100 last:border-0 last:pb-0'>
                 <div className='w-[56px] h-[56px] bg-gray-100 shrink-0 overflow-hidden'>
-                  {item.image && <img src={item.image} alt='' className='w-full h-full object-cover' />}
+                  <img src={item.imageUrl || '/placeholder.png'} alt='' className='w-full h-full object-cover' />
                 </div>
                 <div className='flex-1 min-w-0'>
                   <p className='font-[amma4] text-gray-900 text-[13px] truncate'>{item.name}</p>
                   <p className='font-[amma3] text-gray-500 text-[12px] mt-[2px]'>
-                    {item.color && `${item.color} / `}{item.size && `${item.size} / `}Qty: {item.count || 1}
+                    {item.color && `${item.color} / `}{item.size && `${item.size} / `}Qty: {item.quantity}
                   </p>
                 </div>
-                <p className='font-[amma4] text-gray-900 text-[13px] shrink-0'>₹{(item.price * (item.count || 1)).toLocaleString('en-IN')}</p>
+                <p className='font-[amma4] text-gray-900 text-[13px] shrink-0'>₹{Number(item.totalPrice).toLocaleString('en-IN')}</p>
               </div>
             ))}
           </div>
@@ -112,15 +145,15 @@ const AccountOrderDetails = () => {
 
         <div className='grid grid-cols-1 md:grid-cols-2 gap-[24px]'>
           {/* Shipping */}
-          {order.shippingAddress && (
+          {addr && (
             <div className='border border-gray-200 p-[24px]'>
               <h3 className='font-[amma4] text-gray-900 text-[13px] tracking-[2px] uppercase mb-[12px]'>Shipping Address</h3>
               <div className='font-[amma3] text-gray-600 text-[13px] leading-[1.8]'>
-                <p>{order.shippingAddress.firstName} {order.shippingAddress.lastName}</p>
-                <p>{order.shippingAddress.address}</p>
-                {order.shippingAddress.apartment && <p>{order.shippingAddress.apartment}</p>}
-                <p>{order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.pinCode}</p>
-                <p>{order.shippingAddress.phone}</p>
+                <p>{addr.firstName} {addr.lastName}</p>
+                <p>{addr.address}</p>
+                {addr.apartment && <p>{addr.apartment}</p>}
+                <p>{addr.city}, {addr.state} {addr.pinCode}</p>
+                {addr.phone && <p>{addr.phone}</p>}
               </div>
             </div>
           )}
@@ -129,16 +162,12 @@ const AccountOrderDetails = () => {
           <div className='border border-gray-200 p-[24px]'>
             <h3 className='font-[amma4] text-gray-900 text-[13px] tracking-[2px] uppercase mb-[12px]'>Payment Summary</h3>
             <div className='space-y-[8px] font-[amma3] text-[13px]'>
-              <div className='flex justify-between'><span className='text-gray-500'>Subtotal</span><span className='text-gray-900'>₹{order.subtotal.toLocaleString('en-IN')}</span></div>
-              <div className='flex justify-between'><span className='text-gray-500'>Shipping</span><span className='text-gray-900'>{order.shipping === 0 ? 'FREE' : `₹${order.shipping}`}</span></div>
-              {order.discount > 0 && <div className='flex justify-between'><span className='text-gray-500'>Discount</span><span className='text-green-600'>-₹{order.discount.toLocaleString('en-IN')}</span></div>}
-              {order.tax > 0 && <div className='flex justify-between'><span className='text-gray-500'>Tax (GST)</span><span className='text-gray-900'>₹{order.tax.toLocaleString('en-IN')}</span></div>}
+              <div className='flex justify-between'><span className='text-gray-500'>Subtotal</span><span className='text-gray-900'>₹{Number(order.subtotal).toLocaleString('en-IN')}</span></div>
+              <div className='flex justify-between'><span className='text-gray-500'>Shipping</span><span className='text-gray-900'>{order.shippingCost === 0 ? 'FREE' : `₹${order.shippingCost}`}</span></div>
+              {order.discountAmount > 0 && <div className='flex justify-between'><span className='text-gray-500'>Discount</span><span className='text-green-600'>-₹{Number(order.discountAmount).toLocaleString('en-IN')}</span></div>}
+              {order.taxAmount > 0 && <div className='flex justify-between'><span className='text-gray-500'>Tax (GST)</span><span className='text-gray-900'>₹{Number(order.taxAmount).toLocaleString('en-IN')}</span></div>}
               <div className='flex justify-between pt-[8px] border-t border-gray-200 font-[amma4]'>
-                <span>Total</span><span>₹{order.total.toLocaleString('en-IN')}</span>
-              </div>
-              <div className='flex justify-between pt-[4px]'>
-                <span className='text-gray-500'>Payment</span>
-                <span className='text-gray-700 uppercase'>{order.paymentMethod === 'cod' ? 'Cash on Delivery' : order.paymentMethod}</span>
+                <span>Total</span><span>₹{Number(order.total).toLocaleString('en-IN')}</span>
               </div>
             </div>
           </div>
@@ -149,11 +178,6 @@ const AccountOrderDetails = () => {
           {isDelivered && (
             <button className='py-[12px] px-[24px] border border-gray-300 font-[amma3] text-[11px] tracking-[2px] uppercase text-gray-700 hover:border-gray-900 transition-colors'>
               <i className='ri-download-line mr-[6px]'></i>Download Invoice
-            </button>
-          )}
-          {isDelivered && (
-            <button className='py-[12px] px-[24px] border border-gray-300 font-[amma3] text-[11px] tracking-[2px] uppercase text-gray-700 hover:border-gray-900 transition-colors'>
-              <i className='ri-return-left-line mr-[6px]'></i>Return Item
             </button>
           )}
           {canCancel && (
@@ -172,10 +196,12 @@ const AccountOrderDetails = () => {
           <div className='fixed inset-0 z-[9999] flex items-center justify-center bg-black/40' onClick={() => setShowCancelModal(false)}>
             <div className='bg-white p-[32px] max-w-[380px] w-[90%]' onClick={e => e.stopPropagation()}>
               <h3 className='font-[amma4] text-gray-900 text-[16px] tracking-[1px] uppercase mb-[12px]'>Cancel Order?</h3>
-              <p className='font-[amma3] text-gray-500 text-[13px] mb-[24px]'>Are you sure you want to cancel order #{orderId}? This action cannot be undone.</p>
+              <p className='font-[amma3] text-gray-500 text-[13px] mb-[24px]'>Are you sure you want to cancel order #{order.orderNumber || order.id.slice(0, 8)}? This action cannot be undone.</p>
               <div className='flex gap-[12px]'>
                 <button onClick={() => setShowCancelModal(false)} className='flex-1 py-[12px] border border-gray-300 font-[amma3] text-[11px] tracking-[2px] uppercase text-gray-700 hover:border-gray-900 transition-colors'>Keep Order</button>
-                <button onClick={handleCancel} className='flex-1 py-[12px] bg-red-600 text-white font-[amma3] text-[11px] tracking-[2px] uppercase hover:bg-red-700 transition-colors'>Yes, Cancel</button>
+                <button onClick={handleCancel} disabled={cancelling} className='flex-1 py-[12px] bg-red-600 text-white font-[amma3] text-[11px] tracking-[2px] uppercase hover:bg-red-700 transition-colors disabled:opacity-50'>
+                  {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
+                </button>
               </div>
             </div>
           </div>
