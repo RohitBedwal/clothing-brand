@@ -12,7 +12,7 @@ import CartPage from '../pages/CartPage';
 import CheckoutPage from '../pages/CheckoutPage';
 import OrderSuccessPage from '../pages/OrderSuccessPage';
 import ProductDetails from '../pages/ProductDetails';
-import SearchName from '../pages/SearchName';
+
 import CategoryContext from '../context/CategoryContext';
 import ProductByCategory from '../pages/ProductByCategory';
 import CategoriesPage from '../pages/CategoriesPage';
@@ -45,6 +45,7 @@ import PrivacyPolicyPage from '../pages/PrivacyPolicyPage';
 import TermsPage from '../pages/TermsPage';
 import RefundPolicyPage from '../pages/RefundPolicyPage';
 import SizeGuidePage from '../pages/SizeGuidePage';
+import NotFound from '../pages/NotFound';
 
 const App = () => {
 
@@ -70,7 +71,6 @@ const App = () => {
       <Route path='/categories' element={<CategoriesPage/>}/>
       <Route path='/category/:slug' element={<ProductByCategory/>}/>
       <Route path='/product/:id' element={<ProductDetails/>}/>
-      <Route path='/search' element={<SearchName/>}/>
       <Route path='/wishlist' element={<WishlistPage/>}/>
       <Route path='/cart' element={<CartPage/>}/>
       <Route path='/checkout' element={<CheckoutPage/>}/>
@@ -97,6 +97,7 @@ const App = () => {
       <Route path='/terms' element={<TermsPage/>}/>
       <Route path='/refund-policy' element={<RefundPolicyPage/>}/>
       <Route path='/size-guide' element={<SizeGuidePage/>}/>
+      <Route path='*' element={<NotFound/>}/>
     </Routes>
     <Footer />
    </BrowserRouter>

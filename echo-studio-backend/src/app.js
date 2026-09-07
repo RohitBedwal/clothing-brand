@@ -19,6 +19,7 @@ import reviewRoutes from './routes/reviewRoutes.js';
 import couponRoutes from './routes/couponRoutes.js';
 import searchRoutes from './routes/searchRoutes.js';
 import shippingRoutes from './routes/shippingRoutes.js';
+import bannerRoutes from './routes/bannerRoutes.js';
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/shipping', shippingRoutes);
+app.use('/api/banners', bannerRoutes);
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({ success: true, message: 'ECHO STUDIO API is running' });

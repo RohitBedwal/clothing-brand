@@ -408,3 +408,18 @@ model CouponUsage {
   @@index([orderId])
   @@map("coupon_usages")
 }
+
+model Banner {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  subtitle  String?
+  imageUrl  String
+  link      String?
+  position  Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, position])
+  @@map("banners")
+}

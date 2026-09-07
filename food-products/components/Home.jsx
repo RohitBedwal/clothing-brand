@@ -8,6 +8,7 @@ import { quickViewContext } from '../context/QuickViewContext'
 import productService from '../services/productService'
 import { formatPrice } from '../src/utils/formatPrice'
 import categoryService from '../services/categoryService'
+import bannerService from '../services/bannerService'
 
 const ITEMS_PER_VIEW = 4;
 
@@ -22,25 +23,22 @@ const Home = () => {
   const [newArrivals, setNewArrivals] = useState([]);
   const [bestSellers, setBestSellers] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [banners, setBanners] = useState([]);
   const [newArrivalsIndex, setNewArrivalsIndex] = useState(0);
   const [bestSellersIndex, setBestSellersIndex] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const [newRes, bestRes, catRes] = await Promise.all([
-          productService.getProducts({ newArrival: 'true', limit: 8 }),
-          productService.getProducts({ featured: 'true', limit: 8 }),
-          categoryService.getCategories(),
-        ]);
-        setNewArrivals(newRes.products || []);
-        setBestSellers(bestRes.products || []);
-        setCategories(Array.isArray(catRes) ? catRes : catRes.categories || []);
-      } catch {
-        setNewArrivals([]);
-        setBestSellers([]);
-        setCategories([]);
-      }
+      const [newRes, bestRes, catRes, bannerRes] = await Promise.allSettled([
+        productService.getProducts({ newArrival: 'true', limit: 8 }),
+        productService.getProducts({ featured: 'true', limit: 8 }),
+        categoryService.getCategories(),
+        bannerService.getBanners(),
+      ]);
+      setNewArrivals(newRes.status === 'fulfilled' ? (newRes.value.products || []) : []);
+      setBestSellers(bestRes.status === 'fulfilled' ? (bestRes.value.products || []) : []);
+      setCategories(catRes.status === 'fulfilled' ? (Array.isArray(catRes.value) ? catRes.value : catRes.value.categories || []) : []);
+      setBanners(bannerRes.status === 'fulfilled' ? (bannerRes.value.banners || []) : []);
     };
     fetchData();
   }, []);
@@ -128,21 +126,34 @@ onClick={() => navigate(`/product/${item.id}`)}
       <NavBar2 />
       <Cart />
 
-      {/* Hero Section */}
-      <div className='h-[70vh] md:h-[85vh] overflow-hidden mt-[110px] relative'>
-        <img
-          className='w-full h-full object-cover'
-          src="https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=1920&h=1080&fit=crop"
-          alt="Fashion Editorial"
-        />
-        <div className='absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent'></div>
-        <div className='absolute bottom-[60px] left-[40px] md:left-[80px] max-md:bottom-[40px] max-md:left-[20px]'>
-          <p className='font-[amma3] text-white/80 text-[12px] md:text-[14px] tracking-[6px] uppercase mb-[12px]'>Spring/Summer 2026</p>
-          <h1 className='font-[amma4] text-white text-[36px] md:text-[56px] tracking-[4px] uppercase leading-tight'>The New<br/>Silhouette</h1>
-          <button className='mt-[24px] px-[32px] py-[12px] bg-white text-black font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black hover:text-white transition-all duration-300'>
-            Explore Collection
-          </button>
-        </div>
+      {/* Hero Section - First Banner */}
+      <div className='h-[70vh] md:h-[85vh] overflow-hidden relative'>
+        {banners[0] ? (
+          <div className='relative w-full h-full cursor-pointer' onClick={() => navigate(banners[0].link || '/')}>
+            <img
+              className='w-full h-full object-cover'
+              src={banners[0].imageUrl}
+              alt={banners[0].title}
+            />
+            <div className='absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent'></div>
+            <div className='absolute bottom-[60px] left-[40px] md:left-[80px] max-md:bottom-[40px] max-md:left-[20px]'>
+              {banners[0].subtitle && <p className='font-[amma3] text-white/80 text-[12px] md:text-[14px] tracking-[6px] uppercase mb-[12px]'>{banners[0].subtitle}</p>}
+              <h1 className='font-[amma4] text-white text-[36px] md:text-[56px] tracking-[4px] uppercase leading-tight'>{banners[0].title}</h1>
+              <button className='mt-[24px] px-[32px] py-[12px] bg-white text-black font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black hover:text-white transition-all duration-300'>
+                Shop Now
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <img
+              className='w-full h-full object-cover'
+              src="https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=1920&h=1080&fit=crop"
+              alt="Fashion Editorial"
+            />
+            <div className='absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent'></div>
+          </>
+        )}
       </div>
 
       {/* New Arrivals Slider */}
@@ -276,16 +287,38 @@ onClick={() => navigate(`/product/${item.id}`)}
         </div>
       </div>
 
-      {/* Full Width Banner */}
-      <div className='w-full h-[500px] md:h-[700px] overflow-hidden'>
-        <img
-          src="https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=1920&h=800&fit=crop"
-          alt="Fashion Banner"
-          className='w-full h-full object-cover'
-        />
+      {/* Full Width Banner - Second Banner */}
+      <div className='w-full h-[500px] md:h-[700px] overflow-hidden relative'>
+        {banners[1] ? (
+          <div className='relative w-full h-full cursor-pointer' onClick={() => navigate(banners[1].link || '/')}>
+            <img
+              src={banners[1].imageUrl}
+              alt={banners[1].title}
+              className='w-full h-full object-cover'
+            />
+            <div className='absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent'></div>
+            <div className='absolute bottom-[60px] left-[40px] md:left-[80px] max-md:bottom-[40px] max-md:left-[20px]'>
+              {banners[1].subtitle && <p className='font-[amma3] text-white/80 text-[12px] md:text-[14px] tracking-[6px] uppercase mb-[12px]'>{banners[1].subtitle}</p>}
+              <h2 className='font-[amma4] text-white text-[32px] md:text-[48px] tracking-[4px] uppercase leading-tight'>{banners[1].title}</h2>
+              <button className='mt-[24px] px-[32px] py-[12px] bg-white text-black font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black hover:text-white transition-all duration-300'>
+                Shop Now
+              </button>
+            </div>
+          </div>
+        ) : (
+          <img
+            src="https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=1920&h=800&fit=crop"
+            alt="Fashion Banner"
+            className='w-full h-full object-cover'
+          />
+        )}
       </div>
 
       {/* Products Grid */}
+      <div className='text-center pt-[20px] mb-[0px]'>
+        <p className='font-[amma3] text-gray-400 text-[11px] tracking-[4px] uppercase mb-[8px]'>ECHOSTUDIO</p>
+        <h2 className='font-[amma4] text-gray-900 text-[24px] md:text-[32px] tracking-[3px] uppercase'>Our Collection</h2>
+      </div>
       <FashionCard ascName={ascName} descName={descName} ascGrade={ascGrade} descGrade={descGrade} />
 
       {/* View All Button */}

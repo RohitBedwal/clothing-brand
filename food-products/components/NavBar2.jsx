@@ -1,28 +1,29 @@
-import { useGSAP } from '@gsap/react';
-import gsap from 'gsap';
 import React, { useContext, useRef, useState, useCallback, useEffect } from 'react'
-import { ContextApi } from '../context/InputContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { sideBarContext } from '../context/CategoryContext';
 import { cartOpenContext } from '../context/CartContext';
 import { authContext } from '../context/AuthContext';
 import { wishlistContext } from '../context/WishlistContext';
 import categoryService from '../services/categoryService';
+import productService from '../services/productService';
 
-const NavBar2 = ({ setSearchName }) => {
-  const { input, setInput } = useContext(ContextApi)
+const NavBar2 = () => {
   const { setOpen } = useContext(sideBarContext)
   const { setCart, totalQuantity } = useContext(cartOpenContext)
   const { isAuthenticated } = useContext(authContext)
   const { wishlistCount } = useContext(wishlistContext)
-  const blackbox = useRef(null);
   const navigate = useNavigate();
 
   const [searchBar, setSearchBar] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
   const [categories, setCategories] = useState([]);
   const closeTimeoutRef = useRef(null);
   const menuRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const debounceRef = useRef(null);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -36,38 +37,54 @@ const NavBar2 = ({ setSearchName }) => {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    if (searchBar && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+    if (searchBar) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [searchBar]);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!searchInput.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    setSuggestionLoading(true);
+    debounceRef.current = setTimeout(() => {
+      productService.getProducts({ search: searchInput.trim(), limit: 6 })
+        .then(res => setSuggestions(res.products || []))
+        .catch(() => setSuggestions([]))
+        .finally(() => setSuggestionLoading(false));
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [searchInput]);
+
   function submitHandler(e) {
     e.preventDefault();
-    navigate('/search');
-    setSearchName(true)
-    setSearchBar(false);
+    closeSearch();
   }
 
-  const CloseRef = useRef(null);
+  function handleSuggestionClick(product) {
+    navigate(`/product/${product.id}`);
+    setSearchBar(false);
+    setSearchInput('');
+    setSuggestions([]);
+  }
 
-  useGSAP(() => {
-    if (searchBar) {
-      gsap.to(CloseRef.current, {
-        transform: "translateY(100%)",
-        duration: .3,
-        opacity: 100
-      })
-      gsap.to(blackbox.current, {
-        y: "0%",
-        duration: .001,
-      })
-    } else {
-      gsap.to(CloseRef.current, {
-        transform: "translateY(0%)",
-        duration: .3,
-        opacity: 0
-      })
-      gsap.to(blackbox.current, {
-        y: "-100%",
-        duration: .001,
-      })
-    }
-  }, [searchBar])
+  function openSearch() {
+    setSearchBar(true);
+  }
+
+  function closeSearch() {
+    setSearchBar(false);
+    setSearchInput('');
+    setSuggestions([]);
+  }
 
   const handleMouseEnter = useCallback((menu) => {
     if (closeTimeoutRef.current) {
@@ -100,10 +117,14 @@ const NavBar2 = ({ setSearchName }) => {
     setOpenMenu(openMenu === menu ? null : menu);
   };
 
+  const getImage = (p) => p.images?.[0]?.url || '/placeholder.png';
+  const getPrice = (p) => Number(p.price) || 0;
+
   return (
     <div>
-      <div ref={CloseRef} className='flex justify-between h-[80px] border-b border-gray-100 fixed w-full bg-white z-30 items-center px-[30px] max-md:px-[16px]'>
-        <div className='font-[amma4] text-gray-900 text-[22px] tracking-[8px] uppercase'>Echo Studio</div>
+      {/* Navbar */}
+      <div className='flex justify-between h-[80px] border-b border-gray-100 fixed w-full bg-white z-30 items-center px-[30px] max-md:px-[16px]'>
+        <Link to='/' className='font-[amma4] text-gray-900 text-[22px] tracking-[8px] uppercase'>Echo Studio</Link>
 
         {/* Desktop Nav */}
         <div className='hidden md:flex items-center gap-x-[28px] text-[12px] font-[amma3] tracking-[3px] uppercase text-gray-700'>
@@ -132,7 +153,7 @@ const NavBar2 = ({ setSearchName }) => {
         </div>
 
         <div className='flex gap-x-[20px] items-center'>
-          <i onClick={() => { !searchBar ? setSearchBar(true) : setSearchBar(false) }} className="text-[18px] cursor-pointer ri-search-line text-gray-800 hover:text-black transition-colors"></i>
+          <i onClick={openSearch} className="text-[18px] cursor-pointer ri-search-line text-gray-800 hover:text-black transition-colors"></i>
           <Link to={isAuthenticated ? '/account' : '/login'}>
             <i className="text-[18px] ri-user-3-line cursor-pointer text-gray-800 hover:text-black transition-colors"></i>
           </Link>
@@ -167,8 +188,6 @@ const NavBar2 = ({ setSearchName }) => {
         }`}
       >
         <div className='max-w-[1400px] mx-auto px-[60px] py-[40px] flex gap-[40px]'>
-
-          {/* Categories Column */}
           <div className='flex gap-[40px]'>
             {categories.map((cat) => (
               <div key={cat.id} className='min-w-[160px]'>
@@ -195,7 +214,6 @@ const NavBar2 = ({ setSearchName }) => {
             ))}
           </div>
 
-          {/* Right - Promo Image */}
           <div className='flex-1 ml-auto relative overflow-hidden group cursor-pointer' onClick={() => setOpenMenu(null)}>
             <Link to="/new-arrivals">
               <div className='relative h-[400px] overflow-hidden'>
@@ -216,14 +234,80 @@ const NavBar2 = ({ setSearchName }) => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div ref={CloseRef} className='flex items-center opacity-0 gap-x-[5px] h-[70px] fixed w-full top-0 translate-y-full z-10 bg-white px-[40px] max-md:px-[20px]'>
-        <i className="text-[18px] ri-search-line text-gray-400"></i>
-        <form className='w-[100%] text-center px-[5px]' action="" onSubmit={(e) => { submitHandler(e) }}>
-          <input onChange={(e) => setInput(e.target.value)} value={input} className='focus:outline-none w-[100%] h-[40px] uppercase font-[amma3] text-[14px] tracking-[2px] placeholder-gray-400' type="text" placeholder='Search collections...' />
-        </form>
-        <button onClick={() => { setSearchBar(false) }}><i className="text-[17px] cursor-pointer ri-close-large-fill text-gray-400"></i></button>
-      </div>
+      {/* Search Overlay */}
+      {searchBar && (
+        <div className='fixed inset-0 z-40'>
+          <div className='absolute inset-0 bg-black/40' onClick={closeSearch}></div>
+          <div className='absolute top-0 left-0 right-0 bg-white px-[40px] max-md:px-[20px] pt-[100px] pb-[40px] shadow-lg max-h-[80vh] overflow-y-auto animate-slideDown'>
+            <div className='max-w-[600px] mx-auto'>
+              <form onSubmit={submitHandler} className='flex items-center gap-[12px] border-b-2 border-gray-900 pb-[12px]'>
+                <i className="text-[20px] ri-search-line text-gray-900"></i>
+                <input
+                  ref={searchInputRef}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  value={searchInput}
+                  className='flex-1 focus:outline-none h-[40px] font-[amma3] text-[16px] tracking-[1px] placeholder-gray-400 bg-transparent'
+                  type="text"
+                  placeholder='Search for products...'
+                />
+                <button type='button' onClick={closeSearch}>
+                  <i className="text-[20px] cursor-pointer ri-close-line text-gray-400 hover:text-gray-900 transition-colors"></i>
+                </button>
+              </form>
+
+              {searchInput.trim() ? (
+                <div className='mt-[16px]'>
+                  {suggestionLoading ? (
+                    <div className='flex items-center gap-[8px] py-[12px]'>
+                      <div className='w-[16px] h-[16px] border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin'></div>
+                      <span className='font-[amma3] text-[12px] text-gray-400'>Searching...</span>
+                    </div>
+                  ) : suggestions.length > 0 ? (
+                    <div>
+                      <p className='font-[amma3] text-[10px] text-gray-400 uppercase tracking-[2px] mb-[12px]'>Suggestions</p>
+                      <div className='space-y-[2px]'>
+                        {suggestions.map((product) => (
+                          <div
+                            key={product.id}
+                            onClick={() => handleSuggestionClick(product)}
+                            className='flex items-center gap-[12px] p-[10px] cursor-pointer hover:bg-gray-50 transition-colors rounded-[4px]'
+                          >
+                            <div className='w-[48px] h-[60px] bg-gray-100 flex-shrink-0 overflow-hidden'>
+                              <img src={getImage(product)} alt={product.name} className='w-full h-full object-cover' />
+                            </div>
+                            <div className='flex-1 min-w-0'>
+                              <p className='font-[amma4] text-[12px] text-gray-900 uppercase tracking-[1px] truncate'>{product.name}</p>
+                              <p className='font-[amma3] text-[11px] text-gray-400 mt-[2px]'>{product.category?.name || ''}</p>
+                            </div>
+                            <span className='font-[amma3] text-[12px] text-gray-900 flex-shrink-0'>₹{getPrice(product).toLocaleString('en-IN')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className='font-[amma3] text-[12px] text-gray-400 py-[12px]'>No products found</p>
+                  )}
+                </div>
+              ) : (
+                <div className='mt-[24px]'>
+                  <p className='font-[amma3] text-[10px] text-gray-400 uppercase tracking-[2px] mb-[12px]'>Quick Links</p>
+                  <div className='flex flex-wrap gap-[8px]'>
+                    {['Dresses', 'T-Shirts', 'Sarees', 'Jackets', 'Accessories'].map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => setSearchInput(tag)}
+                        className='px-[14px] py-[8px] border border-gray-200 font-[amma3] text-[11px] text-gray-600 uppercase tracking-[1px] hover:border-gray-900 hover:text-gray-900 transition-colors'
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Menu */}
       <div className='md:hidden fixed top-[80px] left-0 w-full bg-white border-b border-gray-200 z-20 max-h-[70vh] overflow-y-auto'>

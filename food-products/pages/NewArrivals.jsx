@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect, useRef } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { cartOpenContext } from '../context/CartContext'
 import { quickViewContext } from '../context/QuickViewContext'
@@ -11,12 +11,7 @@ const NewArrivals = () => {
   const { setCart, addToCart } = useContext(cartOpenContext)
   const { openQuickView } = useContext(quickViewContext)
   const [hoveredId, setHoveredId] = useState(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [products, setProducts] = useState([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const sliderRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,37 +25,6 @@ const NewArrivals = () => {
     };
     fetchProducts();
   }, []);
-
-  const scrollAmount = 300;
-
-  const nextSlide = () => {
-    if (sliderRef.current) {
-      sliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
-
-  const prevSlide = () => {
-    if (sliderRef.current) {
-      sliderRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-    }
-  };
-
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    setStartX(e.pageX - sliderRef.current.offsetLeft);
-    setScrollLeft(sliderRef.current.scrollLeft);
-  };
-
-  const handleMouseUp = () => setIsDragging(false);
-  const handleMouseLeave = () => setIsDragging(false);
-
-  const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    const x = e.pageX - sliderRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    sliderRef.current.scrollLeft = scrollLeft - walk;
-  };
 
   const getImage = (p) => p.images?.[0]?.url || '/placeholder.png';
   const getPrice = (p) => Number(p.price) || 0;
@@ -81,17 +45,9 @@ const NewArrivals = () => {
           <div className='w-[50px] h-[1px] bg-gray-300 mx-auto mt-[16px]'></div>
         </div>
 
-        {/* Smooth Slider */}
-        <div className='relative'>
-          <div
-            ref={sliderRef}
-            className='flex gap-[16px] overflow-x-auto scroll-smooth snap-x snap-mandatory px-[30px] max-md:px-[16px] pb-[10px]'
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
-            onMouseMove={handleMouseMove}
-          >
+        {/* Product Grid */}
+        <div className='w-full px-[30px] max-md:px-[16px]'>
+          <div className='grid grid-cols-2 md:grid-cols-4 gap-x-[16px] gap-y-[30px]'>
             {products.map((product) => {
               const price = getPrice(product);
               const comparePrice = getComparePrice(product);
@@ -100,7 +56,7 @@ const NewArrivals = () => {
               return (
                 <div
                   key={product.id}
-                  className='group cursor-pointer flex-shrink-0 w-[260px] md:w-[280px] snap-start'
+                  className='group cursor-pointer'
                   onMouseEnter={() => setHoveredId(product.id)}
                   onMouseLeave={() => setHoveredId(null)}
                   onClick={() => navigate(`/product/${product.id}`)}
@@ -162,20 +118,6 @@ const NewArrivals = () => {
               );
             })}
           </div>
-
-          {/* Navigation Arrows */}
-          <button
-            onClick={prevSlide}
-            className='absolute left-[8px] top-1/2 -translate-y-1/2 w-[40px] h-[40px] bg-white/90 backdrop-blur-sm border border-gray-200 flex items-center justify-center text-gray-600 hover:border-black hover:text-black transition-all shadow-sm z-10'
-          >
-            <i className="ri-arrow-left-s-line text-[20px]"></i>
-          </button>
-          <button
-            onClick={nextSlide}
-            className='absolute right-[8px] top-1/2 -translate-y-1/2 w-[40px] h-[40px] bg-white/90 backdrop-blur-sm border border-gray-200 flex items-center justify-center text-gray-600 hover:border-black hover:text-black transition-all shadow-sm z-10'
-          >
-            <i className="ri-arrow-right-s-line text-[20px]"></i>
-          </button>
         </div>
 
       </div>
