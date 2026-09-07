@@ -1,35 +1,13 @@
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-import React, { useContext, useRef, useState, useCallback } from 'react'
+import React, { useContext, useRef, useState, useCallback, useEffect } from 'react'
 import { ContextApi } from '../context/InputContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { sideBarContext } from '../context/CategoryContext';
 import { cartOpenContext } from '../context/CartContext';
 import { authContext } from '../context/AuthContext';
 import { wishlistContext } from '../context/WishlistContext';
-
-const shopByCategories = [
-  { name: "SHOP ALL", link: "/shop", sale: false },
-  { name: "NEW ARRIVALS", link: "/new-arrivals", sale: false },
-  { name: "DRESSES", link: "/collection/women", sale: false },
-  { name: "SAREES", link: "/collection/women", sale: false },
-  { name: "CO-ORD SETS", link: "/collection/women", sale: false },
-  { name: "TOPS", link: "/collection/women", sale: false },
-  { name: "BOTTOMS", link: "/collection/women", sale: false },
-  { name: "ACCESSORIES", link: "/collection/accessories", sale: false },
-  { name: "READY TO SHIP", link: "/ready-to-ship", sale: false },
-  { name: "SALE", link: "/sale", sale: true },
-];
-
-const collectionCategories = [
-  { name: "ALL COLLECTIONS", link: "/collections" },
-  { name: "NEW COLLECTION", link: "/new-arrivals" },
-  { name: "SIGNATURE COLLECTION", link: "/collections" },
-  { name: "EVENING EDIT", link: "/collections" },
-  { name: "OCCASION WEAR", link: "/collections" },
-  { name: "FESTIVE EDIT", link: "/collections" },
-  { name: "SALE", link: "/sale", sale: true },
-];
+import categoryService from '../services/categoryService';
 
 const NavBar2 = ({ setSearchName }) => {
   const { input, setInput } = useContext(ContextApi)
@@ -42,8 +20,21 @@ const NavBar2 = ({ setSearchName }) => {
 
   const [searchBar, setSearchBar] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
+  const [categories, setCategories] = useState([]);
   const closeTimeoutRef = useRef(null);
   const menuRef = useRef(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await categoryService.getCategories();
+        setCategories(Array.isArray(data) ? data : data.categories || []);
+      } catch {
+        setCategories([]);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   function submitHandler(e) {
     e.preventDefault();
@@ -135,25 +126,6 @@ const NavBar2 = ({ setSearchName }) => {
             </button>
           </div>
 
-          <div
-            className='relative'
-            onMouseEnter={() => handleMouseEnter('collection')}
-            onMouseLeave={handleMouseLeave}
-          >
-            <button
-              className='flex items-center gap-[4px] hover:text-black transition-colors cursor-pointer py-[30px]'
-              onClick={() => handleMenuClick('collection')}
-            >
-              COLLECTION
-              <svg
-                className={`w-[10px] h-[10px] transition-transform duration-300 ${openMenu === 'collection' ? 'rotate-180' : ''}`}
-                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          </div>
-
           <Link to="/new-arrivals" className='hover:text-black transition-colors cursor-pointer py-[30px]'>NEW ARRIVAL</Link>
           <Link to="/sale" className='text-red-500 hover:text-red-600 transition-colors cursor-pointer py-[30px]'>SALE</Link>
           <Link to="/ready-to-ship" className='hover:text-black transition-colors cursor-pointer py-[30px]'>READY TO SHIP</Link>
@@ -194,30 +166,37 @@ const NavBar2 = ({ setSearchName }) => {
             : 'opacity-0 -translate-y-2 pointer-events-none'
         }`}
       >
-        <div className='max-w-[1400px] mx-auto px-[60px] py-[40px] flex'>
-          {/* Left - Subcategories */}
-          <div className='w-[300px] flex-shrink-0'>
-            <p className='font-[amma3] text-[10px] text-gray-400 uppercase tracking-[3px] mb-[20px]'>Categories</p>
-            <div className='flex flex-col gap-[0px]'>
-              {shopByCategories.map((cat, idx) => (
+        <div className='max-w-[1400px] mx-auto px-[60px] py-[40px] flex gap-[40px]'>
+
+          {/* Categories Column */}
+          <div className='flex gap-[40px]'>
+            {categories.map((cat) => (
+              <div key={cat.id} className='min-w-[160px]'>
                 <Link
-                  key={idx}
-                  to={cat.link}
-                  className={`font-[amma3] text-[13px] tracking-[2px] uppercase py-[10px] border-b border-gray-100 transition-all duration-200 ${
-                    cat.sale
-                      ? 'text-red-500 hover:text-red-600 hover:pl-[8px]'
-                      : 'text-gray-600 hover:text-black hover:pl-[8px]'
-                  }`}
+                  to={`/category/${cat.slug}`}
+                  className='font-[amma3] text-[11px] text-gray-900 uppercase tracking-[2px] mb-[12px] block hover:text-black font-bold'
                   onClick={() => setOpenMenu(null)}
                 >
                   {cat.name}
                 </Link>
-              ))}
-            </div>
+                <div className='flex flex-col gap-[0px]'>
+                  {cat.children?.map((sub) => (
+                    <Link
+                      key={sub.id}
+                      to={`/category/${sub.slug}`}
+                      className='font-[amma3] text-[12px] tracking-[1px] uppercase py-[8px] text-gray-500 hover:text-black hover:pl-[4px] transition-all duration-200'
+                      onClick={() => setOpenMenu(null)}
+                    >
+                      {sub.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Right - Promo Image */}
-          <div className='flex-1 ml-[40px] relative overflow-hidden group cursor-pointer' onClick={() => setOpenMenu(null)}>
+          <div className='flex-1 ml-auto relative overflow-hidden group cursor-pointer' onClick={() => setOpenMenu(null)}>
             <Link to="/new-arrivals">
               <div className='relative h-[400px] overflow-hidden'>
                 <img
@@ -227,62 +206,9 @@ const NavBar2 = ({ setSearchName }) => {
                 />
                 <div className='absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-all duration-300'></div>
                 <div className='absolute bottom-[30px] left-[30px]'>
-                  <p className='font-[amma3] text-white/70 text-[11px] tracking-[4px] uppercase mb-[6px]'>Dress</p>
+                  <p className='font-[amma3] text-white/70 text-[11px] tracking-[4px] uppercase mb-[6px]'>New In</p>
                   <h3 className='font-[amma4] text-white text-[24px] tracking-[3px] uppercase mb-[12px]'>ECHO LUNA DRESS</h3>
                   <span className='font-[amma3] text-white text-[11px] tracking-[3px] uppercase border-b border-white pb-[2px] group-hover:border-white/60 transition-colors'>Shop Now</span>
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* COLLECTION Mega Menu */}
-      <div
-        onMouseEnter={handleDropdownMouseEnter}
-        onMouseLeave={handleDropdownMouseLeave}
-        className={`hidden md:block fixed top-[80px] left-0 w-full bg-white border-b border-gray-200 z-20 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-          openMenu === 'collection'
-            ? 'opacity-100 translate-y-0 pointer-events-auto'
-            : 'opacity-0 -translate-y-2 pointer-events-none'
-        }`}
-      >
-        <div className='max-w-[1400px] mx-auto px-[60px] py-[40px] flex'>
-          {/* Left - Subcategories */}
-          <div className='w-[300px] flex-shrink-0'>
-            <p className='font-[amma3] text-[10px] text-gray-400 uppercase tracking-[3px] mb-[20px]'>Collections</p>
-            <div className='flex flex-col gap-[0px]'>
-              {collectionCategories.map((cat, idx) => (
-                <Link
-                  key={idx}
-                  to={cat.link}
-                  className={`font-[amma3] text-[13px] tracking-[2px] uppercase py-[10px] border-b border-gray-100 transition-all duration-200 ${
-                    cat.sale
-                      ? 'text-red-500 hover:text-red-600 hover:pl-[8px]'
-                      : 'text-gray-600 hover:text-black hover:pl-[8px]'
-                  }`}
-                  onClick={() => setOpenMenu(null)}
-                >
-                  {cat.name}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Right - Promo Image */}
-          <div className='flex-1 ml-[40px] relative overflow-hidden group cursor-pointer' onClick={() => setOpenMenu(null)}>
-            <Link to="/collections">
-              <div className='relative h-[400px] overflow-hidden'>
-                <img
-                  src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1000&h=600&fit=crop"
-                  alt="Collection Featured"
-                  className='w-full h-full object-cover transition-transform duration-700 group-hover:scale-105'
-                />
-                <div className='absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-all duration-300'></div>
-                <div className='absolute bottom-[30px] left-[30px]'>
-                  <p className='font-[amma3] text-white/70 text-[11px] tracking-[4px] uppercase mb-[6px]'>Collection</p>
-                  <h3 className='font-[amma4] text-white text-[24px] tracking-[3px] uppercase mb-[12px]'>SIGNATURE COLLECTION</h3>
-                  <span className='font-[amma3] text-white text-[11px] tracking-[3px] uppercase border-b border-white pb-[2px] group-hover:border-white/60 transition-colors'>Explore</span>
                 </div>
               </div>
             </Link>
@@ -303,35 +229,26 @@ const NavBar2 = ({ setSearchName }) => {
       <div className='md:hidden fixed top-[80px] left-0 w-full bg-white border-b border-gray-200 z-20 max-h-[70vh] overflow-y-auto'>
         {openMenu === 'shopby-mobile' && (
           <div className='px-[16px] py-[20px]'>
-            <p className='font-[amma3] text-[10px] text-gray-400 uppercase tracking-[3px] mb-[12px]'>Categories</p>
-            {shopByCategories.map((cat, idx) => (
-              <Link
-                key={idx}
-                to={cat.link}
-                className={`block font-[amma3] text-[13px] tracking-[2px] uppercase py-[12px] border-b border-gray-100 ${
-                  cat.sale ? 'text-red-500' : 'text-gray-600'
-                }`}
-                onClick={() => setOpenMenu(null)}
-              >
-                {cat.name}
-              </Link>
-            ))}
-          </div>
-        )}
-        {openMenu === 'collection-mobile' && (
-          <div className='px-[16px] py-[20px]'>
-            <p className='font-[amma3] text-[10px] text-gray-400 uppercase tracking-[3px] mb-[12px]'>Collections</p>
-            {collectionCategories.map((cat, idx) => (
-              <Link
-                key={idx}
-                to={cat.link}
-                className={`block font-[amma3] text-[13px] tracking-[2px] uppercase py-[12px] border-b border-gray-100 ${
-                  cat.sale ? 'text-red-500' : 'text-gray-600'
-                }`}
-                onClick={() => setOpenMenu(null)}
-              >
-                {cat.name}
-              </Link>
+            {categories.map((cat) => (
+              <div key={cat.id} className='mb-[12px]'>
+                <Link
+                  to={`/category/${cat.slug}`}
+                  className='font-[amma3] text-[12px] text-gray-900 uppercase tracking-[2px] mb-[6px] block font-bold'
+                  onClick={() => setOpenMenu(null)}
+                >
+                  {cat.name}
+                </Link>
+                {cat.children?.map((sub) => (
+                  <Link
+                    key={sub.id}
+                    to={`/category/${sub.slug}`}
+                    className='block font-[amma3] text-[11px] tracking-[1px] uppercase py-[8px] border-b border-gray-100 text-gray-500'
+                    onClick={() => setOpenMenu(null)}
+                  >
+                    {sub.name}
+                  </Link>
+                ))}
+              </div>
             ))}
           </div>
         )}

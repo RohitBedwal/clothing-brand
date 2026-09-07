@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react'
 import authService from '../services/authService'
+import userService from '../services/userService'
 
 export const authContext = createContext();
 
@@ -50,7 +51,7 @@ const AuthProvider = ({ children }) => {
   }, []);
 
   const updateProfile = useCallback(async (data) => {
-    const res = await authService.updateProfile(data);
+    const res = await userService.updateProfile(data);
     if (res.success) {
       setCurrentUser(res.user);
       return res.user;

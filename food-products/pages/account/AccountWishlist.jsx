@@ -32,7 +32,7 @@ const AccountWishlist = () => {
         <div className='grid grid-cols-2 md:grid-cols-3 gap-[16px]'>
           {wishlistItems.map(product => (
             <div key={product._id} className='group border border-gray-200 overflow-hidden hover:border-gray-900 transition-colors'>
-              <div className='relative aspect-[3/4] bg-gray-100 overflow-hidden cursor-pointer' onClick={() => navigate('/productDetails', { state: { product } })}>
+              <div className='relative aspect-[3/4] bg-gray-100 overflow-hidden cursor-pointer' onClick={() => navigate(`/product/${product.id}`)}>
                 {product.image && <img src={product.image} alt={product.name} className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-500' />}
                 <div className='absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors'></div>
               </div>

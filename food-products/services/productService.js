@@ -5,7 +5,7 @@ export const productService = {
     const query = new URLSearchParams(params).toString();
     return api.get(`/products?${query}`);
   },
-  getProductBySlug: (slug) => api.get(`/products/${slug}`),
+  getProductById: (id) => api.get(`/products/${id}`),
   getNewArrivals: () => api.get('/products?newArrival=true&sort=newest'),
   getSaleProducts: () => api.get('/products?sale=true'),
   getFeaturedProducts: () => api.get('/products?featured=true'),

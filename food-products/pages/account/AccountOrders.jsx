@@ -5,7 +5,7 @@ import orderService from '../../services/orderService'
 
 const getStatusColor = (status) => {
   const colors = {
-    PENDING: 'bg-yellow-100 text-yellow-700',
+    PENDING: 'bg-green-100 text-green-700',
     CONFIRMED: 'bg-blue-100 text-blue-700',
     PROCESSING: 'bg-indigo-100 text-indigo-700',
     PACKED: 'bg-purple-100 text-purple-700',
@@ -20,7 +20,10 @@ const getStatusColor = (status) => {
 };
 
 const formatStatus = (status) => {
-  return status?.replace(/_/g, ' ') || 'Unknown';
+  const labels = {
+    PENDING: 'Order Created',
+  };
+  return labels[status] || status?.replace(/_/g, ' ') || 'Unknown';
 };
 
 const AccountOrders = () => {

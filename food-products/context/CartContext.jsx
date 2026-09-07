@@ -32,13 +32,14 @@ const CartContext = ({ children }) => {
   const [cart, setCart] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [orderNote, setOrderNote] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const prevAuthRef = useRef(isAuthenticated);
 
   // When not authenticated, use guest cart from localStorage
   useEffect(() => {
     if (!isAuthenticated) {
       setCartItems(loadGuestCart());
+      setLoading(false);
     }
   }, [isAuthenticated]);
 
@@ -46,6 +47,7 @@ const CartContext = ({ children }) => {
   useEffect(() => {
     if (isAuthenticated && !prevAuthRef.current) {
       const guestItems = loadGuestCart();
+      localStorage.removeItem(GUEST_CART_KEY);
       if (guestItems.length > 0) {
         const mergeCart = async () => {
           for (const item of guestItems) {
@@ -56,7 +58,6 @@ const CartContext = ({ children }) => {
               } catch { /* skip if out of stock */ }
             }
           }
-          localStorage.removeItem(GUEST_CART_KEY);
           fetchCart();
         };
         mergeCart();
@@ -195,14 +196,6 @@ const CartContext = ({ children }) => {
     await updateQuantity(itemId, newQty);
   }, [cartItems, updateQuantity]);
 
-  const decreaseCount = useCallback(async (itemId) => {
-    const item = cartItems.find(i => (i.id || i.variantId) === itemId);
-    if (!item) return;
-    const currentQty = item.quantity || item.count || 1;
-    if (currentQty <= 1) return;
-    await updateQuantity(itemId, currentQty - 1);
-  }, [cartItems, updateQuantity]);
-
   const removeFromCart = useCallback(async (itemId) => {
     if (!isAuthenticated) {
       const guestItems = loadGuestCart();
@@ -215,6 +208,17 @@ const CartContext = ({ children }) => {
     const data = await cartService.removeCartItem(itemId);
     setCartItems(data.items || []);
   }, [isAuthenticated]);
+
+  const decreaseCount = useCallback(async (itemId) => {
+    const item = cartItems.find(i => (i.id || i.variantId) === itemId);
+    if (!item) return;
+    const currentQty = item.quantity || item.count || 1;
+    if (currentQty <= 1) {
+      await removeFromCart(itemId);
+      return;
+    }
+    await updateQuantity(itemId, currentQty - 1);
+  }, [cartItems, updateQuantity, removeFromCart]);
 
   const deleteItem = useCallback(async (itemId) => {
     await removeFromCart(itemId);

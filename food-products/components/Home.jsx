@@ -77,7 +77,7 @@ const Home = () => {
             src={getImage(item)}
             alt={item.name}
             className='w-full h-full object-cover transition-transform duration-700 group-hover:scale-105'
-            onClick={() => navigate('/productDetails', { state: { product: item } })}
+onClick={() => navigate(`/product/${item.id}`)}
           />
           {showBadge && (
             <div className='absolute top-[10px] left-[10px] px-[8px] py-[4px] bg-black text-white text-[9px] font-[amma3] tracking-[2px] uppercase'>
@@ -98,8 +98,17 @@ const Home = () => {
           >
             <i className="ri-eye-line text-[15px]"></i>
           </div>
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              openQuickView(item);
+            }}
+            className='absolute bottom-[10px] right-[52px] h-[36px] w-[36px] bg-white flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer hover:bg-black hover:text-white opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0'
+          >
+            <i className="ri-shopping-bag-line text-[15px]"></i>
+          </div>
         </div>
-        <h3 className='font-[amma4] text-[13px] text-gray-900 uppercase tracking-[1px] mb-[4px] truncate text-center' onClick={() => navigate('/productDetails', { state: { product: item } })}>{item.name}</h3>
+        <h3 className='font-[amma4] text-[13px] text-gray-900 uppercase tracking-[1px] mb-[4px] truncate text-center' onClick={() => navigate(`/product/${item.id}`)}>{item.name}</h3>
         <div className='flex items-center justify-center gap-[8px]'>
           <span className={`font-[amma3] text-[13px] ${hasDiscount ? 'text-red-600' : 'text-gray-700'}`}>
             ₹{price.toLocaleString('en-IN')}
@@ -195,7 +204,7 @@ const Home = () => {
               <p className='font-[amma3] text-gray-500 text-[10px] tracking-[5px] uppercase mb-[12px]'>ECHOSTUDIO</p>
               <h2 className='font-[amma4] text-gray-900 text-[24px] md:text-[32px] tracking-[4px] uppercase mb-[20px]'>Shop Category</h2>
               <Link
-                to="/collections"
+                to="/categories"
                 className='inline-block border border-gray-900 px-[32px] py-[14px] font-[amma3] text-[11px] tracking-[3px] uppercase text-gray-900 hover:bg-gray-900 hover:text-white transition-all duration-300'
               >
                 View More
@@ -206,7 +215,7 @@ const Home = () => {
               {categories.slice(0, 4).map((cat, idx) => (
                 <Link
                   key={cat.id}
-                  to={`/category/products?category=${cat.slug}`}
+                  to={`/category/${cat.slug}`}
                   className='group cursor-pointer'
                 >
                   <div className='relative overflow-hidden bg-gray-50 aspect-[4/5] mb-[8px]'>

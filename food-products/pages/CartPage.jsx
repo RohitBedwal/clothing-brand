@@ -1,14 +1,29 @@
-import React, { useContext } from 'react'
+import React, { useContext, useState, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { cartOpenContext } from '../context/CartContext'
+import { authContext } from '../context/AuthContext'
 import { formatPrice } from '../src/utils/formatPrice'
 import NavBar2 from '../components/NavBar2'
+import LoginDrawer from '../components/LoginDrawer'
 
 const FREE_SHIPPING_THRESHOLD = 15000;
 
 const CartPage = () => {
   const navigate = useNavigate();
-  const { cartItems, increaseCount, decreaseCount, deleteItem, orderNote, setOrderNote, totalQuantity, subtotal } = useContext(cartOpenContext);
+  const { cartItems, increaseCount, decreaseCount, deleteItem, orderNote, setOrderNote, totalQuantity, subtotal, cartLoading } = useContext(cartOpenContext);
+  const { isAuthenticated } = useContext(authContext);
+  const [showLoginDrawer, setShowLoginDrawer] = useState(false);
+
+  if (cartLoading) {
+    return (
+      <div className='bg-white min-h-screen'>
+        <NavBar2 />
+        <div className='pt-[180px] pb-[80px] flex justify-center items-center'>
+          <div className='w-[32px] h-[32px] border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin'></div>
+        </div>
+      </div>
+    );
+  }
 
   const progressPercent = Math.min((subtotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
   const hasFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
@@ -21,7 +36,7 @@ const CartPage = () => {
   const getItemQty = (item) => item.quantity || item.count || 1;
   const getItemId = (item) => item.id || item._id || item.variantId;
 
-  if (cartItems.length === 0) {
+  if (cartItems.length === 0 && !cartLoading) {
     return (
       <div className='bg-white min-h-screen'>
         <NavBar2 />
@@ -176,11 +191,13 @@ const CartPage = () => {
               </p>
 
               <button
-                onClick={() => navigate('/checkout')}
+                onClick={() => isAuthenticated ? navigate('/checkout') : setShowLoginDrawer(true)}
                 className='w-full py-[15px] bg-gray-900 text-white font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black transition-colors mb-[28px]'
               >
                 Checkout
               </button>
+
+              <LoginDrawer open={showLoginDrawer} onClose={() => setShowLoginDrawer(false)} />
 
               <div className='border-t border-gray-200 pt-[24px] mb-[24px]'>
                 <p className='font-[amma3] text-[11px] text-gray-900 uppercase tracking-[2px] mb-[6px]'>Order Note</p>
@@ -201,4 +218,4 @@ const CartPage = () => {
   );
 };
 
-export default CartPage;
+export default memo(CartPage);

@@ -98,8 +98,11 @@ const AccountDashboard = () => {
                   <div className='text-right'>
                     <p className='font-[amma4] text-gray-900 text-[13px]'>₹{Number(order.total).toLocaleString('en-IN')}</p>
                     <span className={`inline-block mt-[4px] px-[8px] py-[2px] font-[amma3] text-[10px] uppercase tracking-[1px] ${
-                      order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                    }`}>{order.status?.replace(/_/g, ' ')}</span>
+                      order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                      order.status === 'PENDING' ? 'bg-green-100 text-green-700' :
+                      order.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                      'bg-blue-100 text-blue-700'
+                    }`}>{order.status === 'PENDING' ? 'Order Created' : order.status?.replace(/_/g, ' ')}</span>
                   </div>
                 </Link>
               ))}

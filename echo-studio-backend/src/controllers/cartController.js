@@ -27,15 +27,11 @@ export const addToCart = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Insufficient stock' });
     }
 
-    let cart = await prisma.cart.findUnique({
+    let cart = await prisma.cart.upsert({
       where: { userId: req.user.id },
+      update: {},
+      create: { userId: req.user.id },
     });
-
-    if (!cart) {
-      cart = await prisma.cart.create({
-        data: { userId: req.user.id },
-      });
-    }
 
     const existingItem = await prisma.cartItem.findFirst({
       where: {
@@ -139,13 +135,11 @@ export const removeCartItem = async (req, res, next) => {
 
 export const clearCart = async (req, res, next) => {
   try {
-    const cart = await prisma.cart.findUnique({
+    let cart = await prisma.cart.upsert({
       where: { userId: req.user.id },
+      update: {},
+      create: { userId: req.user.id },
     });
-
-    if (!cart) {
-      return res.status(404).json({ success: false, message: 'Cart not found' });
-    }
 
     await prisma.cartItem.deleteMany({
       where: { cartId: cart.id },

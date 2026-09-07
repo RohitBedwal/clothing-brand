@@ -1,7 +1,8 @@
 import React, { useContext, useState, useRef, useEffect, useMemo } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { cartOpenContext } from '../context/CartContext';
 import { formatPrice, formatPriceCompact } from '../src/utils/formatPrice';
+import productService from '../services/productService';
 
 const fallbackImages = [
   "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=800&h=1000&fit=crop",
@@ -46,9 +47,27 @@ const Accordion = ({ title, children, isOpen, onToggle }) => {
 
 const ProductCard = () => {
   const { setCart, addToCart } = useContext(cartOpenContext)
-  const location = useLocation();
+  const { id } = useParams();
   const navigate = useNavigate();
-  const rawProduct = location.state?.product;
+  const [rawProduct, setRawProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedSize, setSelectedSize] = useState("M");
+  const [selectedColor, setSelectedColor] = useState("Default");
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [openAccordion, setOpenAccordion] = useState('description');
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+  const [addingToCart, setAddingToCart] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    productService.getProductById(id)
+      .then(res => setRawProduct(res.product))
+      .catch(() => setRawProduct(null))
+      .finally(() => setLoading(false));
+  }, [id]);
 
   const product = useMemo(() => {
     if (!rawProduct) return null;
@@ -69,6 +88,25 @@ const ProductCard = () => {
     };
   }, [rawProduct]);
 
+  useEffect(() => {
+    if (product) {
+      setSelectedSize(product.sizes[0] || "M");
+      setSelectedColor(product.colors[0] || "Default");
+      setSelectedImage(0);
+      setQuantity(1);
+    }
+  }, [product?.id]);
+
+  if (loading) {
+    return (
+      <div className='w-full bg-white min-h-screen'>
+        <div className='pt-[120px] pb-[80px] flex flex-col items-center'>
+          <div className='w-[30px] h-[30px] border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin'></div>
+        </div>
+      </div>
+    );
+  }
+
   if (!product) {
     return (
       <div className='w-full bg-white min-h-screen'>
@@ -82,20 +120,9 @@ const ProductCard = () => {
     );
   }
 
-  const [selectedSize, setSelectedSize] = useState(product.sizes[0] || "M");
-  const [selectedColor, setSelectedColor] = useState(product.colors[0] || "Default");
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [quantity, setQuantity] = useState(1);
-  const [openAccordion, setOpenAccordion] = useState('description');
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
-
-  const matchedVariant = useMemo(() => {
-    if (!product.variants.length) return null;
-    return product.variants.find(v =>
-      v.size === selectedSize && v.color === selectedColor
-    ) || product.variants.find(v => v.size === selectedSize) || product.variants.find(v => v.color === selectedColor) || product.variants[0];
-  }, [product.variants, selectedSize, selectedColor]);
+  const matchedVariant = product.variants.find(v =>
+    v.size === selectedSize && v.color === selectedColor
+  ) || product.variants.find(v => v.size === selectedSize) || product.variants.find(v => v.color === selectedColor) || product.variants[0];
 
   const displayPrice = matchedVariant ? Number(matchedVariant.price) : product.price;
   const hasDiscount = product.compareAtPrice && product.compareAtPrice > displayPrice;
@@ -112,14 +139,20 @@ const ProductCard = () => {
     setOpenAccordion(openAccordion === name ? null : name);
   };
 
-  const handleAddToCart = () => {
-    addToCart({
-      ...product,
-      selectedSize,
-      selectedColor,
-      price: displayPrice,
-    });
-    setCart(true);
+  const handleAddToCart = async () => {
+    if (addingToCart) return;
+    setAddingToCart(true);
+    try {
+      await addToCart({
+        ...product,
+        selectedSize,
+        selectedColor,
+        price: displayPrice,
+      });
+      setCart(true);
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
     return (
@@ -320,9 +353,15 @@ const ProductCard = () => {
             <div className='flex gap-[12px] mb-[12px]'>
               <button
                 onClick={handleAddToCart}
-                className='flex-1 py-[15px] bg-gray-900 text-white font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black transition-colors'
+                disabled={addingToCart}
+                className='flex-1 py-[15px] bg-gray-900 text-white font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-[8px]'
               >
-                Add to Bag
+                {addingToCart ? (
+                  <>
+                    <div className='w-[14px] h-[14px] border-[1.5px] border-white/30 border-t-white rounded-full animate-spin'></div>
+                    Adding...
+                  </>
+                ) : 'Add to Bag'}
               </button>
               <button className='flex-1 py-[15px] border border-gray-900 text-gray-900 font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-gray-900 hover:text-white transition-all'>
                 Buy it now

@@ -13,6 +13,7 @@ const defaultImages = [
 const QuickView = () => {
   const { quickViewOpen, quickViewProduct, closeQuickView } = useContext(quickViewContext);
   const { setCart, addToCart } = useContext(cartOpenContext);
+  const [addingToCart, setAddingToCart] = useState(false);
   const navigate = useNavigate();
 
   const [selectedImage, setSelectedImage] = useState(0);
@@ -45,7 +46,10 @@ const QuickView = () => {
   if (!quickViewOpen || !quickViewProduct) return null;
 
   const product = quickViewProduct;
-  const images = product.images || (product.image ? [product.image, ...defaultImages.slice(1)] : defaultImages);
+  const rawImages = product.images || [];
+  const images = rawImages.length > 0
+    ? rawImages.map(img => typeof img === 'string' ? img : img.url).filter(Boolean)
+    : (product.image ? [product.image] : defaultImages);
   const colors = product.colors || ["Silver", "Charcoal", "Navy"];
   const sizes = product.sizes || ["XS", "S", "M", "L", "XL"];
   const description = product.description || "Crafted with precision and attention to detail, this piece embodies contemporary elegance. Made from premium materials for lasting comfort and style.";
@@ -54,7 +58,7 @@ const QuickView = () => {
 
   const handleMoreDetails = () => {
     closeQuickView();
-    navigate('/productDetails', { state: { product: { ...product, brand: product.brand || "ECHO STUDIO" } } });
+    navigate(`/product/${product.id}`);
   };
 
   const handleOverlayClick = (e) => {
@@ -232,22 +236,34 @@ const QuickView = () => {
           {/* Buttons */}
           <div className='flex gap-[10px] mb-[12px]'>
             <button
-              onClick={() => {
-                addToCart({
-                  ...product,
-                  _id: product.id,
-                  selectedSize,
-                  selectedColor,
-                  image_url: images[0],
-                  product_name: product.name,
-                  brands: product.brand || "ECHO STUDIO"
-                });
-                setCart(true);
-                closeQuickView();
+              onClick={async () => {
+                if (addingToCart) return;
+                setAddingToCart(true);
+                try {
+                  await addToCart({
+                    ...product,
+                    _id: product.id,
+                    selectedSize,
+                    selectedColor,
+                    image_url: images[0],
+                    product_name: product.name,
+                    brands: product.brand || "ECHO STUDIO"
+                  });
+                  setCart(true);
+                  closeQuickView();
+                } finally {
+                  setAddingToCart(false);
+                }
               }}
-              className='flex-1 py-[13px] bg-gray-900 text-white font-[amma3] text-[11px] tracking-[3px] uppercase hover:bg-black transition-colors'
+              disabled={addingToCart}
+              className='flex-1 py-[13px] bg-gray-900 text-white font-[amma3] text-[11px] tracking-[3px] uppercase hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-[8px]'
             >
-              Add to bag
+              {addingToCart ? (
+                <>
+                  <div className='w-[14px] h-[14px] border-[1.5px] border-white/30 border-t-white rounded-full animate-spin'></div>
+                  Adding...
+                </>
+              ) : 'Add to bag'}
             </button>
             <button
               onClick={handleMoreDetails}

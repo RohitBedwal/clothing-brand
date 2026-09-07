@@ -7,7 +7,7 @@ const TRACKING_STEPS = ['PENDING', 'CONFIRMED', 'PROCESSING', 'PACKED', 'SHIPPED
 
 const getStatusColor = (status) => {
   const colors = {
-    PENDING: 'bg-yellow-100 text-yellow-700',
+    PENDING: 'bg-green-100 text-green-700',
     CONFIRMED: 'bg-blue-100 text-blue-700',
     PROCESSING: 'bg-indigo-100 text-indigo-700',
     PACKED: 'bg-purple-100 text-purple-700',
@@ -19,7 +19,12 @@ const getStatusColor = (status) => {
   return colors[status] || 'bg-gray-100 text-gray-700';
 };
 
-const formatStatus = (status) => status?.replace(/_/g, ' ') || 'Unknown';
+const formatStatus = (status) => {
+  const labels = {
+    PENDING: 'Order Created',
+  };
+  return labels[status] || status?.replace(/_/g, ' ') || 'Unknown';
+};
 
 const AccountOrderDetails = () => {
   const { orderId } = useParams();

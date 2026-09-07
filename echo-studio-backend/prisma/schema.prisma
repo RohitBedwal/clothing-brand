@@ -100,35 +100,23 @@ model Address {
 }
 
 model Category {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String     @id @default(uuid()) @db.Uuid
   name        String
-  slug        String   @unique
+  slug        String     @unique
   description String?
   image       String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  parentId    String?    @db.Uuid
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryHierarchy")
   products Product[]
 
   @@index([slug])
+  @@index([parentId])
   @@map("categories")
-}
-
-model Collection {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String
-  slug        String   @unique
-  description String?
-  image       String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  productCollections ProductCollection[]
-
-  @@index([slug])
-  @@map("collections")
 }
 
 model Product {
@@ -156,7 +144,6 @@ model Product {
   orderItems         OrderItem[]
   reviews            Review[]
   wishlistItems      WishlistItem[]
-  productCollections ProductCollection[]
 
   @@index([slug])
   @@index([categoryId])
@@ -204,18 +191,6 @@ model ProductVariant {
   @@index([sku])
   @@index([isActive])
   @@map("product_variants")
-}
-
-model ProductCollection {
-  productId    String @db.Uuid
-  collectionId String @db.Uuid
-
-  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-
-  @@id([productId, collectionId])
-  @@index([collectionId])
-  @@map("product_collections")
 }
 
 model Cart {

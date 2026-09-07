@@ -1,4 +1,4 @@
-import React, { useContext, useRef } from 'react'
+import React, { useContext, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
@@ -7,9 +7,20 @@ import { formatPrice } from '../src/utils/formatPrice'
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { cart, setCart, cartItems, clearCart, increaseCount, removeFromCart } = useContext(cartOpenContext)
+  const { cart, setCart, cartItems, cartLoading, increaseCount, decreaseCount, deleteItem } = useContext(cartOpenContext)
+  const [updatingId, setUpdatingId] = useState(null);
   const openSiderBarRef = useRef(null);
   const blackbox = useRef(null);
+
+  const handleIncrease = async (id) => {
+    setUpdatingId(id);
+    try { await increaseCount(id); } finally { setUpdatingId(null); }
+  };
+
+  const handleDecrease = async (id) => {
+    setUpdatingId(id);
+    try { await decreaseCount(id); } finally { setUpdatingId(null); }
+  };
 
   useGSAP(() => {
     if (cart) {
@@ -50,7 +61,11 @@ const Cart = () => {
           </div>
 
           <div className='px-[28px] pb-[120px] w-full h-full overflow-scroll'>
-            {cartItems.length > 0 ? (
+            {cartLoading ? (
+              <div className='w-full flex items-center justify-center h-[400px]'>
+                <div className='w-[28px] h-[28px] border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin'></div>
+              </div>
+            ) : cartItems.length > 0 ? (
               cartItems.map((item) => {
                 const id = getItemId(item);
                 return (
@@ -58,17 +73,28 @@ const Cart = () => {
                     <div className='h-[140px] flex gap-[16px] bg-white w-full'>
                       <img className='h-[140px] w-[110px] object-cover' src={getItemImage(item)} alt={getItemName(item)} />
                       <div className='flex-col flex gap-[8px] justify-center flex-1'>
-                        <div className='gap-[4px] flex flex-col'>
-                          <h4 className='font-[amma3] text-[10px] text-gray-400 uppercase tracking-[2px]'>Echo Studio</h4>
-                          <h3 className='font-[amma4] tracking-[2px] text-[14px] text-gray-900 uppercase'>{getItemName(item)}</h3>
-                          {getItemColor(item) && <p className='font-[amma3] text-[10px] text-gray-400'>Color: {getItemColor(item)}</p>}
-                          {getItemSize(item) && <p className='font-[amma3] text-[10px] text-gray-400'>Size: {getItemSize(item)}</p>}
+                        <div className='flex justify-between items-start'>
+                          <div className='gap-[4px] flex flex-col'>
+                            <h4 className='font-[amma3] text-[10px] text-gray-400 uppercase tracking-[2px]'>Echo Studio</h4>
+                            <h3 className='font-[amma4] tracking-[2px] text-[14px] text-gray-900 uppercase'>{getItemName(item)}</h3>
+                            {getItemColor(item) && <p className='font-[amma3] text-[10px] text-gray-400'>Color: {getItemColor(item)}</p>}
+                            {getItemSize(item) && <p className='font-[amma3] text-[10px] text-gray-400'>Size: {getItemSize(item)}</p>}
+                          </div>
+                          <button onClick={() => deleteItem(id)} className='text-gray-300 hover:text-red-500 transition-colors shrink-0 mt-[2px]'>
+                            <i className="ri-delete-bin-line text-[16px]"></i>
+                          </button>
                         </div>
                         <div className='flex gap-[12px] items-center mt-[8px]'>
                           <div className='flex border border-gray-200 w-max'>
-                            <i onClick={() => removeFromCart(id)} className="text-[12px] py-[6px] px-[12px] ri-subtract-line text-gray-500 hover:text-gray-900 cursor-pointer transition-colors"></i>
-                            <p className='py-[6px] text-[12px] px-[12px] text-gray-900'>{getItemQty(item)}</p>
-                            <i onClick={() => increaseCount(id)} className="py-[6px] px-[12px] text-[12px] ri-add-line text-gray-500 hover:text-gray-900 cursor-pointer transition-colors"></i>
+                            <button onClick={() => handleDecrease(id)} disabled={updatingId === id} className="text-[12px] py-[6px] px-[12px] ri-subtract-line text-gray-500 hover:text-gray-900 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"></button>
+                            {updatingId === id ? (
+                              <div className='py-[6px] px-[12px] flex items-center justify-center'>
+                                <div className='w-[12px] h-[12px] border-[1.5px] border-gray-300 border-t-gray-900 rounded-full animate-spin'></div>
+                              </div>
+                            ) : (
+                              <p className='py-[6px] text-[12px] px-[12px] text-gray-900'>{getItemQty(item)}</p>
+                            )}
+                            <button onClick={() => handleIncrease(id)} disabled={updatingId === id} className="py-[6px] px-[12px] text-[12px] ri-add-line text-gray-500 hover:text-gray-900 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"></button>
                           </div>
                           <span className='font-[amma3] text-[13px] text-gray-900'>{formatPrice(getItemPrice(item))}</span>
                         </div>

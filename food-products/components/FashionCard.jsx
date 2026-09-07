@@ -62,7 +62,7 @@ const FashionCard = ({ ascName, descName, ascGrade, descGrade, products: propPro
                                 className='group cursor-pointer'
                                 onMouseEnter={() => setHoveredId(product.id)}
                                 onMouseLeave={() => setHoveredId(null)}
-                                onClick={() => navigate('/productDetails', { state: { product } })}
+                                onClick={() => navigate(`/product/${product.id}`)}
                             >
                                 <div className='relative overflow-hidden bg-gray-50 aspect-[3/4] mb-[16px]'>
                                     <img
@@ -85,8 +85,7 @@ const FashionCard = ({ ascName, descName, ascGrade, descGrade, products: propPro
                                     <div
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            addToCart(product);
-                                            setCart(true);
+                                            openQuickView(product);
                                         }}
                                         className={`absolute bottom-[12px] right-[12px] h-[40px] w-[40px] bg-white flex items-center justify-center transition-all duration-300 shadow-sm ${
                                             hoveredId === product.id ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'

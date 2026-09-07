@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react'
+import React, { useContext, useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { cartOpenContext } from '../context/CartContext'
 import { quickViewContext } from '../context/QuickViewContext'
@@ -7,14 +7,16 @@ import Cart from './Cart'
 import { formatPrice } from '../src/utils/formatPrice'
 import productService from '../services/productService'
 
-const ITEMS_PER_PAGE = 4;
-
 const NewArrivals = () => {
   const { setCart, addToCart } = useContext(cartOpenContext)
   const { openQuickView } = useContext(quickViewContext)
   const [hoveredId, setHoveredId] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [products, setProducts] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const sliderRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,13 +31,36 @@ const NewArrivals = () => {
     fetchProducts();
   }, []);
 
-  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
+  const scrollAmount = 300;
 
-  const nextSlide = () => setCurrentIndex((prev) => (prev + 1) % totalPages);
-  const prevSlide = () => setCurrentIndex((prev) => (prev - 1 + totalPages) % totalPages);
+  const nextSlide = () => {
+    if (sliderRef.current) {
+      sliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
-  const startIndex = currentIndex * ITEMS_PER_PAGE;
-  const displayedProducts = products.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const prevSlide = () => {
+    if (sliderRef.current) {
+      sliderRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setStartX(e.pageX - sliderRef.current.offsetLeft);
+    setScrollLeft(sliderRef.current.scrollLeft);
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseLeave = () => setIsDragging(false);
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - sliderRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    sliderRef.current.scrollLeft = scrollLeft - walk;
+  };
 
   const getImage = (p) => p.images?.[0]?.url || '/placeholder.png';
   const getPrice = (p) => Number(p.price) || 0;
@@ -56,10 +81,18 @@ const NewArrivals = () => {
           <div className='w-[50px] h-[1px] bg-gray-300 mx-auto mt-[16px]'></div>
         </div>
 
-        {/* Product Grid */}
-        <div className='w-full px-[30px] max-md:px-[16px]'>
-          <div className='grid grid-cols-2 lg:grid-cols-4 gap-x-[16px] gap-y-[30px]'>
-            {displayedProducts.map((product) => {
+        {/* Smooth Slider */}
+        <div className='relative'>
+          <div
+            ref={sliderRef}
+            className='flex gap-[16px] overflow-x-auto scroll-smooth snap-x snap-mandatory px-[30px] max-md:px-[16px] pb-[10px]'
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            onMouseMove={handleMouseMove}
+          >
+            {products.map((product) => {
               const price = getPrice(product);
               const comparePrice = getComparePrice(product);
               const hasDiscount = comparePrice && comparePrice > price;
@@ -67,16 +100,17 @@ const NewArrivals = () => {
               return (
                 <div
                   key={product.id}
-                  className='group cursor-pointer'
+                  className='group cursor-pointer flex-shrink-0 w-[260px] md:w-[280px] snap-start'
                   onMouseEnter={() => setHoveredId(product.id)}
                   onMouseLeave={() => setHoveredId(null)}
-                  onClick={() => navigate('/productDetails', { state: { product } })}
+                  onClick={() => navigate(`/product/${product.id}`)}
                 >
                   <div className='relative overflow-hidden bg-gray-50 aspect-[3/4] mb-[12px]'>
                     <img
                       src={getImage(product)}
                       alt={product.name}
                       className='w-full h-full object-cover transition-transform duration-700 group-hover:scale-105'
+                      draggable={false}
                     />
 
                     <div className='absolute top-[10px] left-[10px] px-[8px] py-[3px] bg-black text-white text-[9px] font-[amma3] tracking-[2px] uppercase'>
@@ -90,8 +124,7 @@ const NewArrivals = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          addToCart(product);
-                          setCart(true);
+                          openQuickView(product);
                         }}
                         className='flex-1 py-[8px] bg-white text-black font-[amma3] text-[9px] tracking-[2px] uppercase hover:bg-black hover:text-white transition-colors flex items-center justify-center gap-[4px]'
                       >
@@ -129,28 +162,21 @@ const NewArrivals = () => {
               );
             })}
           </div>
-        </div>
 
-        {/* Slider Navigation */}
-        {totalPages > 1 && (
-          <div className='flex justify-center items-center gap-[16px] mt-[30px]'>
-            <button onClick={prevSlide} className='w-[36px] h-[36px] border border-gray-300 flex items-center justify-center text-gray-500 hover:border-black hover:text-black transition-colors'>
-              <i className="ri-arrow-left-s-line text-[18px]"></i>
-            </button>
-            <div className='flex gap-[6px]'>
-              {Array.from({ length: totalPages }).map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentIndex(idx)}
-                  className={`w-[6px] h-[6px] rounded-full transition-colors ${currentIndex === idx ? 'bg-black' : 'bg-gray-300'}`}
-                ></button>
-              ))}
-            </div>
-            <button onClick={nextSlide} className='w-[36px] h-[36px] border border-gray-300 flex items-center justify-center text-gray-500 hover:border-black hover:text-black transition-colors'>
-              <i className="ri-arrow-right-s-line text-[18px]"></i>
-            </button>
-          </div>
-        )}
+          {/* Navigation Arrows */}
+          <button
+            onClick={prevSlide}
+            className='absolute left-[8px] top-1/2 -translate-y-1/2 w-[40px] h-[40px] bg-white/90 backdrop-blur-sm border border-gray-200 flex items-center justify-center text-gray-600 hover:border-black hover:text-black transition-all shadow-sm z-10'
+          >
+            <i className="ri-arrow-left-s-line text-[20px]"></i>
+          </button>
+          <button
+            onClick={nextSlide}
+            className='absolute right-[8px] top-1/2 -translate-y-1/2 w-[40px] h-[40px] bg-white/90 backdrop-blur-sm border border-gray-200 flex items-center justify-center text-gray-600 hover:border-black hover:text-black transition-all shadow-sm z-10'
+          >
+            <i className="ri-arrow-right-s-line text-[20px]"></i>
+          </button>
+        </div>
 
       </div>
     </div>

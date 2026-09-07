@@ -9,8 +9,8 @@ const LoginPage = () => {
   const redirect = searchParams.get('redirect') || '/';
   const { login } = useContext(authContext);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('abc123@gmail.com');
+  const [password, setPassword] = useState('123456');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [errors, setErrors] = useState({});

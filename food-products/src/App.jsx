@@ -15,13 +15,12 @@ import ProductDetails from '../pages/ProductDetails';
 import SearchName from '../pages/SearchName';
 import CategoryContext from '../context/CategoryContext';
 import ProductByCategory from '../pages/ProductByCategory';
+import CategoriesPage from '../pages/CategoriesPage';
 import CartContext from '../context/CartContext';
 import QuickViewProvider from '../context/QuickViewContext';
 import AuthProvider from '../context/AuthContext';
 import WishlistProvider from '../context/WishlistContext';
 import NewArrivals from '../pages/NewArrivals';
-import Collections from '../pages/Collections';
-import CollectionProducts from '../pages/CollectionProducts';
 import ShopPage from '../pages/ShopPage';
 import SalePage from '../pages/SalePage';
 import ReadyToShipPage from '../pages/ReadyToShipPage';
@@ -68,10 +67,9 @@ const App = () => {
       <Route path='/sale' element={<SalePage/>}/>
       <Route path='/ready-to-ship' element={<ReadyToShipPage/>}/>
       <Route path='/concept-saree-dresses' element={<ConceptSareePage/>}/>
-      <Route path='/collections' element={<Collections/>}/>
-      <Route path='/collection/:name' element={<CollectionProducts/>}/>
-      <Route path='/category/products' element={<ProductByCategory/>}/>
-      <Route path='/productDetails' element={<ProductDetails/>}/>
+      <Route path='/categories' element={<CategoriesPage/>}/>
+      <Route path='/category/:slug' element={<ProductByCategory/>}/>
+      <Route path='/product/:id' element={<ProductDetails/>}/>
       <Route path='/search' element={<SearchName/>}/>
       <Route path='/wishlist' element={<WishlistPage/>}/>
       <Route path='/cart' element={<CartPage/>}/>

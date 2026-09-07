@@ -8,7 +8,7 @@ import { createProductSchema, updateProductSchema } from '../validators/productV
 const router = Router();
 
 router.get('/', productController.getProducts);
-router.get('/:slug', productController.getProductBySlug);
+router.get('/:id', productController.getProductById);
 router.post('/', adminOnly, validate(createProductSchema), productController.createProduct);
 router.put('/:id', adminOnly, validate(updateProductSchema), productController.updateProduct);
 router.delete('/:id', adminOnly, productController.deleteProduct);

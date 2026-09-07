@@ -21,9 +21,23 @@ const paymentMethods = [
   { id: 'cod', name: 'Cash on Delivery' },
 ];
 
+const InputField = ({ label, value, onChange, error, placeholder, type = 'text', half = false }) => (
+  <div className={half ? 'flex-1' : 'w-full'}>
+    <label className='block font-[amma3] text-[11px] text-gray-500 uppercase tracking-[1px] mb-[6px]'>{label}</label>
+    <input
+      type={type}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      className={`w-full border ${error ? 'border-red-400' : 'border-gray-200'} px-[14px] py-[11px] font-[amma3] text-[13px] text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors`}
+    />
+    {error && <p className='font-[amma3] text-[10px] text-red-500 mt-[4px]'>{error}</p>}
+  </div>
+);
+
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { cartItems, subtotal, totalQuantity, fetchCart } = useContext(cartOpenContext);
+  const { cartItems, subtotal, totalQuantity, clearCart } = useContext(cartOpenContext);
   const { currentUser } = useContext(authContext);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errors, setErrors] = useState({});
@@ -32,21 +46,31 @@ const CheckoutPage = () => {
   const [showNewAddress, setShowNewAddress] = useState(false);
 
   // Contact
-  const [email, setEmail] = useState(currentUser?.email || '');
-  const [phone, setPhone] = useState(currentUser?.phone || '');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [newsletter, setNewsletter] = useState(false);
 
   // Shipping Address (for new address)
   const [country, setCountry] = useState('India');
-  const [firstName, setFirstName] = useState(currentUser?.firstName || '');
-  const [lastName, setLastName] = useState(currentUser?.lastName || '');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [address, setAddress] = useState('');
   const [apartment, setApartment] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [pinCode, setPinCode] = useState('');
-  const [shipPhone, setShipPhone] = useState(currentUser?.phone || '');
+  const [shipPhone, setShipPhone] = useState('');
   const [saveInfo, setSaveInfo] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      setEmail(currentUser.email || '');
+      setPhone(currentUser.phone || '');
+      setFirstName(currentUser.firstName || '');
+      setLastName(currentUser.lastName || '');
+      setShipPhone(currentUser.phone || '');
+    }
+  }, [currentUser]);
 
   // Shipping Method
   const [selectedShipping, setSelectedShipping] = useState('standard');
@@ -166,33 +190,20 @@ const CheckoutPage = () => {
         })),
         addressId,
         shippingMethod: selectedShipping,
-        notes: null,
+        notes: undefined,
         couponCode: discountApplied ? discountCode : undefined,
       };
 
       const order = await orderService.createOrder(orderData);
-      await fetchCart();
+      localStorage.removeItem('echo_guest_cart');
       navigate(`/order-success/${order.orderNumber || order.id}`);
+      clearCart();
     } catch (err) {
       setErrors({ general: err.message });
     } finally {
       setIsProcessing(false);
     }
   };
-
-  const InputField = ({ label, value, onChange, error, placeholder, type = 'text', half = false }) => (
-    <div className={half ? 'flex-1' : 'w-full'}>
-      <label className='block font-[amma3] text-[11px] text-gray-500 uppercase tracking-[1px] mb-[6px]'>{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        className={`w-full border ${error ? 'border-red-400' : 'border-gray-200'} px-[14px] py-[11px] font-[amma3] text-[13px] text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors`}
-      />
-      {error && <p className='font-[amma3] text-[10px] text-red-500 mt-[4px]'>{error}</p>}
-    </div>
-  );
 
   if (cartItems.length === 0 && !isProcessing) {
     return (
