@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { cartOpenContext } from '../context/CartContext'
+import { quickViewContext } from '../context/QuickViewContext'
 import NavBar2 from '../components/NavBar2'
 import Cart from './Cart'
 
@@ -23,6 +24,7 @@ const ITEMS_PER_PAGE = 4;
 
 const NewArrivals = () => {
   const { setCart, addToCart } = useContext(cartOpenContext)
+  const { openQuickView } = useContext(quickViewContext)
   const [hoveredId, setHoveredId] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const navigate = useNavigate();
@@ -99,7 +101,13 @@ const NewArrivals = () => {
                       <i className="ri-shopping-bag-line"></i>
                       Add to Bag
                     </button>
-                    <button className='w-[36px] h-[36px] bg-white text-black flex items-center justify-center hover:bg-black hover:text-white transition-colors'>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openQuickView({...product, brand: "ECHO STUDIO"});
+                      }}
+                      className='w-[36px] h-[36px] bg-white text-black flex items-center justify-center hover:bg-black hover:text-white transition-colors'
+                    >
                       <i className="ri-eye-line text-[14px]"></i>
                     </button>
                   </div>

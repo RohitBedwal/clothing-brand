@@ -1,12 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useContext } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-import SortingBox from './SortingBox'
-import SideBar from './SideBar'
 import NavBar2 from './NavBar2'
 import FashionCard from './FashionCard'
-import Header from './Header'
 import Cart from '../pages/Cart'
+import { quickViewContext } from '../context/QuickViewContext'
 
 const newArrivals = [
   { id: 1, name: "Silk Wrap Dress", price: 289, image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600&h=800&fit=crop" },
@@ -38,6 +36,7 @@ const Home = () => {
   const[ascGrade,setAscGrade]= useState(false);
   const[descGrade,setDescGrade]= useState(false);
   const navigate = useNavigate();
+  const { openQuickView } = useContext(quickViewContext);
 
   const [newArrivalsIndex, setNewArrivalsIndex] = useState(0);
   const [bestSellersIndex, setBestSellersIndex] = useState(0);
@@ -89,18 +88,30 @@ const Home = () => {
               {Array.from({ length: newArrivalsTotal }).map((_, slideIdx) => (
                 <div key={slideIdx} className='min-w-full grid grid-cols-2 md:grid-cols-4 gap-x-[16px] gap-y-[30px]'>
                   {newArrivals.slice(slideIdx * ITEMS_PER_VIEW, slideIdx * ITEMS_PER_VIEW + ITEMS_PER_VIEW).map((item) => (
-                    <div key={item.id} className='group cursor-pointer' onClick={() => navigate('/productDetails', { state: { product: {...item, brand: "ECHO STUDIO"} } })}>
+                    <div key={item.id} className='group cursor-pointer'>
                       <div className='relative overflow-hidden bg-gray-50 aspect-[3/4] mb-[12px]'>
                         <img 
                           src={item.image} 
                           alt={item.name}
                           className='w-full h-full object-cover transition-transform duration-700 group-hover:scale-105'
+                          onClick={() => navigate('/productDetails', { state: { product: {...item, brand: "ECHO STUDIO"} } })}
                         />
                         <div className='absolute top-[10px] left-[10px] px-[8px] py-[4px] bg-black text-white text-[9px] font-[amma3] tracking-[2px] uppercase'>
                           New
                         </div>
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openQuickView({...item, brand: "ECHO STUDIO"});
+                          }}
+                          className={`absolute bottom-[10px] right-[10px] h-[36px] w-[36px] bg-white flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer hover:bg-black hover:text-white ${
+                            'opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0'
+                          }`}
+                        >
+                          <i className="ri-eye-line text-[15px]"></i>
+                        </div>
                       </div>
-                      <h3 className='font-[amma4] text-[13px] text-gray-900 uppercase tracking-[1px] mb-[4px] truncate text-center'>{item.name}</h3>
+                      <h3 className='font-[amma4] text-[13px] text-gray-900 uppercase tracking-[1px] mb-[4px] truncate text-center' onClick={() => navigate('/productDetails', { state: { product: {...item, brand: "ECHO STUDIO"} } })}>{item.name}</h3>
                       <p className='font-[amma3] text-[13px] text-gray-700 text-center'>${item.price}</p>
                     </div>
                   ))}
@@ -216,15 +227,27 @@ const Home = () => {
               {Array.from({ length: bestSellersTotal }).map((_, slideIdx) => (
                 <div key={slideIdx} className='min-w-full grid grid-cols-2 md:grid-cols-4 gap-x-[16px] gap-y-[30px]'>
                   {bestSellers.slice(slideIdx * ITEMS_PER_VIEW, slideIdx * ITEMS_PER_VIEW + ITEMS_PER_VIEW).map((item) => (
-                    <div key={item.id} className='group cursor-pointer' onClick={() => navigate('/productDetails', { state: { product: {...item, brand: "ECHO STUDIO"} } })}>
+                    <div key={item.id} className='group cursor-pointer'>
                       <div className='relative overflow-hidden bg-gray-50 aspect-[3/4] mb-[12px]'>
                         <img 
                           src={item.image} 
                           alt={item.name}
                           className='w-full h-full object-cover transition-transform duration-700 group-hover:scale-105'
+                          onClick={() => navigate('/productDetails', { state: { product: {...item, brand: "ECHO STUDIO"} } })}
                         />
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openQuickView({...item, brand: "ECHO STUDIO"});
+                          }}
+                          className={`absolute bottom-[10px] right-[10px] h-[36px] w-[36px] bg-white flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer hover:bg-black hover:text-white ${
+                            'opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0'
+                          }`}
+                        >
+                          <i className="ri-eye-line text-[15px]"></i>
+                        </div>
                       </div>
-                      <h3 className='font-[amma4] text-[13px] text-gray-900 uppercase tracking-[1px] mb-[4px] truncate text-center'>{item.name}</h3>
+                      <h3 className='font-[amma4] text-[13px] text-gray-900 uppercase tracking-[1px] mb-[4px] truncate text-center' onClick={() => navigate('/productDetails', { state: { product: {...item, brand: "ECHO STUDIO"} } })}>{item.name}</h3>
                       <p className='font-[amma3] text-[13px] text-gray-700 text-center'>${item.price}</p>
                     </div>
                   ))}
@@ -262,10 +285,26 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Full Shop Section */}
-      <div className='border-t border-gray-100'>
-        <SortingBox setAscName={setAscName} setDescName={setDescName} setAscGrade={setAscGrade} setDescGrade={setDescGrade} />
-        <FashionCard ascName={ascName} descName={descName} ascGrade={ascGrade} descGrade={descGrade} />
+      {/* Full Width Banner */}
+      <div className='w-full h-[500px] md:h-[700px] overflow-hidden'>
+        <img 
+          src="https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=1920&h=800&fit=crop" 
+          alt="Fashion Banner" 
+          className='w-full h-full object-cover'
+        />
+      </div>
+
+      {/* Products Grid */}
+      <FashionCard ascName={ascName} descName={descName} ascGrade={ascGrade} descGrade={descGrade} />
+
+      {/* View All Button */}
+      <div className='flex justify-center py-[50px]'>
+        <Link 
+          to="/collections"
+          className='px-[48px] py-[16px] border border-gray-900 text-gray-900 font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-gray-900 hover:text-white transition-all duration-300'
+        >
+          View All
+        </Link>
       </div>
     
     </div>

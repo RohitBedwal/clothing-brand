@@ -1,24 +1,22 @@
-import React, { createContext, useEffect, useState } from 'react'
+import React, { createContext, useEffect, useState, useCallback } from 'react'
 
 export const cartOpenContext = createContext();
 
 const CartContext = ({ children }) => {
   const [cart, setCart] = useState(false);
   const [cartItems, setCartItems] = useState([]);
+  const [orderNote, setOrderNote] = useState('');
 
-  // Load cart from localStorage on mount
   useEffect(() => {
     const savedCart = JSON.parse(localStorage.getItem("cartItems")) || [];
     setCartItems(savedCart);
   }, []);
 
-  // Save cart to Local Storage whenever cart updates
   useEffect(() => {
     localStorage.setItem("cartItems", JSON.stringify(cartItems));
   }, [cartItems]);
 
-  //  Add or increase product count (only for selected product)
-  const addToCart = (product) => {
+  const addToCart = useCallback((product) => {
     setCartItems((prevCart) => {
       const existingItem = prevCart.find((item) => item._id === product._id);
       if (existingItem) {
@@ -28,20 +26,9 @@ const CartContext = ({ children }) => {
       }
       return [...prevCart, { ...product, count: 1 }];
     });
-  };
+  }, []);
 
-  const decreaseCount = (productId) => {
-    setCartItems((prevCart) =>
-      prevCart
-        .map((item) =>
-          item._id === productId ? { ...item, count: item.count - 1 } : item
-        )
-        .filter((item) => item.count > 0) // Removes items with count 0
-    );
-  };
-
-  //  Remove or decrease product count (removes only when count > 1)
-  const removeFromCart = (productId) => {
+  const decreaseCount = useCallback((productId) => {
     setCartItems((prevCart) =>
       prevCart
         .map((item) =>
@@ -49,27 +36,50 @@ const CartContext = ({ children }) => {
         )
         .filter((item) => item.count > 0)
     );
-  };
-  const increaseCount = (productId) => {
+  }, []);
+
+  const removeFromCart = useCallback((productId) => {
+    setCartItems((prevCart) =>
+      prevCart
+        .map((item) =>
+          item._id === productId ? { ...item, count: item.count - 1 } : item
+        )
+        .filter((item) => item.count > 0)
+    );
+  }, []);
+
+  const increaseCount = useCallback((productId) => {
     setCartItems((prevCart) =>
       prevCart.map((item) =>
         item._id === productId ? { ...item, count: (item.count || 1) + 1 } : item
       )
     );
-  };
+  }, []);
 
-  //  Clear cart 
-  const clearCart = (productId) => {
-    setCartItems((prevCart) => {
-        const updatedCart = prevCart.filter((item) => item._id !== productId);
-        localStorage.setItem("cartItems", JSON.stringify(updatedCart)); // Update localStorage
-        return updatedCart;
-      });
-  };
+  const deleteItem = useCallback((productId) => {
+    setCartItems((prevCart) => prevCart.filter((item) => item._id !== productId));
+  }, []);
+
+  const clearCart = useCallback((productId) => {
+    setCartItems((prevCart) => prevCart.filter((item) => item._id !== productId));
+  }, []);
+
+  const totalQuantity = cartItems.reduce((sum, item) => sum + (item.count || 1), 0);
+
+  const subtotal = cartItems.reduce((sum, item) => {
+    const price = typeof item.price === 'number' ? item.price : 0;
+    return sum + price * (item.count || 1);
+  }, 0);
 
   return (
     <cartOpenContext.Provider
-      value={{ cart, setCart, cartItems, clearCart,increaseCount, addToCart, removeFromCart }}
+      value={{
+        cart, setCart,
+        cartItems, setCartItems,
+        orderNote, setOrderNote,
+        addToCart, removeFromCart, increaseCount, decreaseCount, deleteItem, clearCart,
+        totalQuantity, subtotal
+      }}
     >
       {children}
     </cartOpenContext.Provider>

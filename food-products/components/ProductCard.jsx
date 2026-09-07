@@ -104,8 +104,8 @@ const ProductCard = () => {
 
   return (
     <div className='w-full bg-white min-h-screen'>
-      <div className='pt-[90px] pb-[60px] px-[30px] max-md:px-[16px]'>
-        <div className='max-w-[1300px] mx-auto flex flex-col lg:flex-row gap-[50px] relative'>
+      <div className='pt-[90px] pb-[60px] px-[30px] max-md:px-[16px] flex flex-col items-center w-full'>
+        <div className='max-w-[1300px] w-full flex flex-col lg:flex-row gap-[50px] relative'>
 
           {/* LEFT COLUMN — GALLERY (Sticky) */}
           <div className='w-full lg:w-[55%] lg:sticky lg:top-[100px] lg:self-start lg:h-fit'>
@@ -173,10 +173,10 @@ const ProductCard = () => {
           </div>
 
           {/* RIGHT COLUMN — PRODUCT INFO */}
-          <div className='w-full lg:w-[45%] flex flex-col'>
+          <div className='w-full lg:w-[45%] flex flex-col pr-[20px] max-md:pr-0'>
 
             {/* Product Title & Price */}
-            <div className='mb-[24px]'>
+            <div className='mb-[28px]'>
               <h1 className='font-[amma4] text-[24px] md:text-[30px] text-gray-900 tracking-[4px] uppercase mb-[12px] leading-tight'>
                 {fashionProduct.name}
               </h1>
@@ -186,18 +186,18 @@ const ProductCard = () => {
               <p className='font-[amma3] text-[12px] text-gray-400'>Tax included.</p>
             </div>
 
-            <div className='h-[1px] bg-gray-200 mb-[24px]'></div>
+            <div className='h-[1px] bg-gray-200 mb-[16px]'></div>
 
             {/* Size Chart Link */}
-            <div className='flex items-center justify-end mb-[20px]'>
-              <button className='flex items-center gap-[6px] text-[12px] text-gray-600 hover:text-gray-900 transition-colors'>
-                <i className="ri-ruler-line text-[14px]"></i>
+            <div className='flex items-center justify-end mb-[8px]'>
+              <button className='flex items-center gap-[4px] text-[11px] text-gray-600 hover:text-gray-900 transition-colors'>
+                <i className="ri-ruler-line text-[12px]"></i>
                 <span className='font-[amma3] uppercase tracking-[1px]'>Size Chart</span>
               </button>
             </div>
 
             {/* Color Selection */}
-            <div className='mb-[20px]'>
+            <div className='mb-[28px]'>
               <p className='font-[amma3] text-[12px] text-gray-500 uppercase tracking-[2px] mb-[10px]'>
                 Color: <span className='text-gray-900'>{selectedColor}</span>
               </p>
@@ -219,7 +219,7 @@ const ProductCard = () => {
             </div>
 
             {/* Size Selection */}
-            <div className='mb-[20px]'>
+            <div className='mb-[28px]'>
               <p className='font-[amma3] text-[12px] text-gray-500 uppercase tracking-[2px] mb-[10px]'>
                 Size: <span className='text-gray-900'>{selectedSize}</span>
               </p>
@@ -241,14 +241,14 @@ const ProductCard = () => {
             </div>
 
             {/* Custom Size */}
-            <div className='mb-[12px]'>
+            <div className='mb-[16px]'>
               <button className='font-[amma3] text-[12px] text-gray-600 underline underline-offset-4 hover:text-gray-900 transition-colors'>
                 Apply for custom size
               </button>
             </div>
 
             {/* Another Color */}
-            <p className='font-[amma3] text-[12px] text-gray-500 mb-[24px]'>
+            <p className='font-[amma3] text-[12px] text-gray-500 mb-[16px]'>
               Want in another color?{' '}
               <button className='underline underline-offset-4 text-gray-700 hover:text-gray-900 transition-colors'>
                 Contact Us
@@ -256,7 +256,7 @@ const ProductCard = () => {
             </p>
 
             {/* Quantity */}
-            <div className='mb-[24px]'>
+            <div className='mb-[16px]'>
               <p className='font-[amma3] text-[12px] text-gray-500 uppercase tracking-[2px] mb-[10px]'>Quantity</p>
               <div className='inline-flex items-center border border-gray-200'>
                 <button
@@ -278,7 +278,7 @@ const ProductCard = () => {
             </div>
 
             {/* Purchase Buttons */}
-            <div className='flex gap-[12px] mb-[16px]'>
+            <div className='flex gap-[12px] mb-[12px]'>
               <button
                 onClick={() => {
                   addToCart({
@@ -300,13 +300,13 @@ const ProductCard = () => {
             </div>
 
             {/* Wishlist */}
-            <button className='w-full py-[14px] border border-gray-200 text-gray-600 font-[amma3] text-[12px] tracking-[2px] uppercase hover:border-gray-400 hover:text-gray-900 transition-all mb-[28px] flex items-center justify-center gap-[8px]'>
+            <button className='w-full py-[14px] border border-gray-200 text-gray-600 font-[amma3] text-[12px] tracking-[2px] uppercase hover:border-gray-400 hover:text-gray-900 transition-all mb-[24px] flex items-center justify-center gap-[8px]'>
               <i className="ri-heart-line text-[14px]"></i>
               Add to Wishlist
             </button>
 
             {/* Benefits Row */}
-            <div className='grid grid-cols-4 gap-[8px] mb-[28px] py-[20px] border-y border-gray-200'>
+            <div className='grid grid-cols-4 gap-[8px] mb-[24px] py-[20px] border-y border-gray-200'>
               <div className='flex flex-col items-center gap-[6px]'>
                 <i className="ri-exchange-line text-[20px] text-gray-500"></i>
                 <span className='font-[amma3] text-[9px] md:text-[10px] text-gray-500 uppercase tracking-[1px] text-center leading-tight'>Easy Return</span>
@@ -326,7 +326,7 @@ const ProductCard = () => {
             </div>
 
             {/* Accordions */}
-            <div className='mb-[28px]'>
+            <div className='mb-[32px]'>
               <Accordion title="Description" isOpen={openAccordion === 'description'} onToggle={() => toggleAccordion('description')}>
                 <p className='font-[amma3] text-[13px] text-gray-600 leading-[1.9]'>
                   {fashionProduct.description}

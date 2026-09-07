@@ -1,8 +1,9 @@
 import React, { useContext, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { cartOpenContext } from '../context/CartContext';
+import { quickViewContext } from '../context/QuickViewContext';
 
-const fashionProducts = [
+export const fashionProducts = [
   {
     id: 1,
     name: "Silk Wrap Dress",
@@ -247,6 +248,7 @@ const fashionProducts = [
 
 const FashionCard = ({ ascName, descName, ascGrade, descGrade }) => {
     const {setCart, addToCart} = useContext(cartOpenContext)
+    const { openQuickView } = useContext(quickViewContext)
     const [hoveredId, setHoveredId] = useState(null);
     const navigate = useNavigate();
 
@@ -309,6 +311,17 @@ const FashionCard = ({ ascName, descName, ascGrade, descGrade }) => {
                                         } hover:bg-black hover:text-white`}
                                     >
                                         <i className="ri-shopping-bag-line text-[16px]"></i>
+                                    </div>
+                                    <div 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openQuickView(product);
+                                        }} 
+                                        className={`absolute bottom-[12px] right-[60px] h-[40px] w-[40px] bg-white flex items-center justify-center transition-all duration-300 shadow-sm ${
+                                            hoveredId === product.id ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+                                        } hover:bg-black hover:text-white`}
+                                    >
+                                        <i className="ri-eye-line text-[16px]"></i>
                                     </div>
                                 </div>
                                 

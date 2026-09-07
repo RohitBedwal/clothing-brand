@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { cartOpenContext } from '../context/CartContext'
+import { quickViewContext } from '../context/QuickViewContext'
 import NavBar2 from '../components/NavBar2'
 import Cart from './Cart'
 
@@ -48,6 +49,7 @@ const ITEMS_PER_PAGE = 8;
 const CollectionProducts = () => {
   const { name } = useParams()
   const { setCart, addToCart } = useContext(cartOpenContext)
+  const { openQuickView } = useContext(quickViewContext)
   const [hoveredId, setHoveredId] = useState(null);
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const loaderRef = useRef(null);
@@ -86,10 +88,10 @@ const CollectionProducts = () => {
       <NavBar2 />
       <Cart />
 
-      <div className='pt-[80px] pb-[60px] px-[30px] max-md:px-[16px]'>
+      <div className='pt-[80px] pb-[60px] px-[30px] max-md:px-[16px] flex flex-col items-center w-full'>
         
         {/* Page Title */}
-        <div className='mb-[40px]'>
+        <div className='mb-[40px] text-center md:text-left w-full max-w-[1400px]'>
           <h1 className='font-[amma1] text-gray-900 text-[28px] md:text-[36px] tracking-[6px] uppercase'>
             {displayName}
           </h1>
@@ -141,7 +143,13 @@ const CollectionProducts = () => {
                     <i className="ri-shopping-bag-line"></i>
                     Add to Bag
                   </button>
-                  <button className='w-[36px] h-[36px] bg-white text-black flex items-center justify-center hover:bg-black hover:text-white transition-colors'>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openQuickView({...product, brand: "ECHO STUDIO"});
+                    }}
+                    className='w-[36px] h-[36px] bg-white text-black flex items-center justify-center hover:bg-black hover:text-white transition-colors'
+                  >
                     <i className="ri-eye-line text-[14px]"></i>
                   </button>
                 </div>

@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import Header from '../components/Header';
 import NavBar2 from '../components/NavBar2';
 import SideBar from '../components/SideBar';
 import SortingBox from '../components/SortingBox';
@@ -17,7 +16,6 @@ const ProductByCategory = () => {
 
   return (
     <div className='bg-white'>
-    <Header/>
     <NavBar2/>
     <Cart/>
     <SideBar />
