@@ -13,7 +13,22 @@ export const protect = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, env.JWT_SECRET);
+    } catch (err) {
+      if (err.name === 'TokenExpiredError' && req.cookies?.refreshToken) {
+        return res.status(401).json({
+          success: false,
+          message: 'Token expired',
+          code: 'TOKEN_EXPIRED',
+        });
+      }
+      return res.status(401).json({
+        success: false,
+        message: 'Not authorized, token invalid',
+      });
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },

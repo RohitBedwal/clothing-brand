@@ -148,8 +148,9 @@ const ProductCard = () => {
         selectedSize,
         selectedColor,
         price: displayPrice,
-      });
+      }, quantity);
       setCart(true);
+      setQuantity(1);
     } finally {
       setAddingToCart(false);
     }

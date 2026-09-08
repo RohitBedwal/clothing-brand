@@ -33,7 +33,10 @@ const CartContext = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [orderNote, setOrderNote] = useState('');
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const prevAuthRef = useRef(isAuthenticated);
+  const syncResolveRef = useRef(null);
+  const syncedRef = useRef(false);
 
   // When not authenticated, use guest cart from localStorage
   useEffect(() => {
@@ -50,19 +53,35 @@ const CartContext = ({ children }) => {
       localStorage.removeItem(GUEST_CART_KEY);
       if (guestItems.length > 0) {
         const mergeCart = async () => {
-          for (const item of guestItems) {
-            const variantId = item.variantId || item.variant?.id;
-            if (variantId) {
-              try {
-                await cartService.addToCart(variantId, item.quantity || item.count || 1);
-              } catch { /* skip if out of stock */ }
+          setSyncing(true);
+          try {
+            for (const item of guestItems) {
+              const variantId = item.variantId || item.variant?.id;
+              if (variantId) {
+                try {
+                  await cartService.addToCart(variantId, item.quantity || item.count || 1);
+                } catch { /* skip if out of stock */ }
+              }
+            }
+            await fetchCart();
+          } finally {
+            setSyncing(false);
+            syncedRef.current = true;
+            if (syncResolveRef.current) {
+              syncResolveRef.current();
+              syncResolveRef.current = null;
             }
           }
-          fetchCart();
         };
         mergeCart();
       } else {
-        fetchCart();
+        fetchCart().then(() => {
+          syncedRef.current = true;
+          if (syncResolveRef.current) {
+            syncResolveRef.current();
+            syncResolveRef.current = null;
+          }
+        });
       }
     }
     prevAuthRef.current = isAuthenticated;
@@ -237,15 +256,24 @@ const CartContext = ({ children }) => {
     }
   }, [isAuthenticated]);
 
+  const syncCart = useCallback(() => {
+    if (syncedRef.current) return Promise.resolve();
+    if (syncing) return Promise.resolve();
+    return new Promise((resolve) => {
+      syncResolveRef.current = resolve;
+    });
+  }, [syncing]);
+
   return (
     <cartOpenContext.Provider
       value={{
         cart, setCart,
         cartItems, setCartItems,
         cartLoading: loading,
+        cartSyncing: syncing,
         orderNote, setOrderNote,
         addToCart, removeFromCart, increaseCount, decreaseCount, deleteItem, clearCart,
-        updateQuantity, fetchCart,
+        updateQuantity, fetchCart, syncCart,
         totalQuantity, subtotal
       }}
     >

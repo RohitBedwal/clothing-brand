@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { authContext } from '../context/AuthContext'
+import { cartOpenContext } from '../context/CartContext'
 import NavBar2 from '../components/NavBar2'
 
 const LoginPage = () => {
@@ -8,6 +9,7 @@ const LoginPage = () => {
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '/';
   const { login } = useContext(authContext);
+  const { syncCart } = useContext(cartOpenContext);
 
   const [email, setEmail] = useState('abc123@gmail.com');
   const [password, setPassword] = useState('123456');
@@ -15,6 +17,7 @@ const LoginPage = () => {
   const [remember, setRemember] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const validate = () => {
     const e = {};
@@ -32,11 +35,15 @@ const LoginPage = () => {
     setErrors({});
     try {
       await login(email, password);
+      setLoading(false);
+      setSyncing(true);
+      await syncCart();
       navigate(redirect, { replace: true });
     } catch (err) {
       setErrors({ general: err.message });
     } finally {
       setLoading(false);
+      setSyncing(false);
     }
   };
 
@@ -109,10 +116,15 @@ const LoginPage = () => {
 
             <button
               type='submit'
-              disabled={loading}
-              className='w-full py-[14px] bg-gray-900 text-white font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black transition-colors disabled:opacity-50 mt-[8px]'
+              disabled={loading || syncing}
+              className='w-full py-[14px] bg-gray-900 text-white font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black transition-colors disabled:opacity-50 mt-[8px] flex items-center justify-center gap-[8px]'
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {syncing ? (
+                <>
+                  <div className='w-[14px] h-[14px] border-[1.5px] border-white/30 border-t-white rounded-full animate-spin'></div>
+                  Syncing cart...
+                </>
+              ) : loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 

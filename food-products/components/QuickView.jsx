@@ -248,8 +248,9 @@ const QuickView = () => {
                     image_url: images[0],
                     product_name: product.name,
                     brands: product.brand || "ECHO STUDIO"
-                  });
+                  }, quantity);
                   setCart(true);
+                  setQuantity(1);
                   closeQuickView();
                 } finally {
                   setAddingToCart(false);

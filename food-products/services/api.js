@@ -1,4 +1,15 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'https://clothing-brand-backend-9nca.onrender.com/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error);
+    else resolve();
+  });
+  failedQueue = [];
+};
 
 const request = async (url, options = {}) => {
   const { headers: customHeaders, ...rest } = options;
@@ -12,6 +23,41 @@ const request = async (url, options = {}) => {
     headers,
     ...rest,
   });
+
+  if (response.status === 401) {
+    const data = await response.json().catch(() => null);
+
+    if (data?.code === 'TOKEN_EXPIRED' && url !== '/auth/refresh') {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(() => request(url, options));
+      }
+
+      isRefreshing = true;
+
+      try {
+        const refreshResponse = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+
+        if (!refreshResponse.ok) {
+          processQueue(new Error('Refresh failed'));
+          window.location.href = '/login';
+          throw new Error('Session expired');
+        }
+
+        processQueue(null);
+        return request(url, options);
+      } catch (err) {
+        processQueue(err);
+        throw err;
+      } finally {
+        isRefreshing = false;
+      }
+    }
+  }
 
   const data = await response.json().catch(() => null);
 

@@ -1,11 +1,13 @@
 import React, { useContext, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authContext } from '../context/AuthContext'
+import { cartOpenContext } from '../context/CartContext'
 import NavBar2 from '../components/NavBar2'
 
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { register } = useContext(authContext);
+  const { syncCart } = useContext(cartOpenContext);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -18,6 +20,7 @@ const RegisterPage = () => {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const validate = () => {
     const e = {};
@@ -43,11 +46,15 @@ const RegisterPage = () => {
     setErrors({});
     try {
       await register({ firstName, lastName, email, phone, password });
+      setLoading(false);
+      setSyncing(true);
+      await syncCart();
       navigate('/', { replace: true });
     } catch (err) {
       setErrors({ general: err.message });
     } finally {
       setLoading(false);
+      setSyncing(false);
     }
   };
 
@@ -117,8 +124,13 @@ const RegisterPage = () => {
             </label>
             {errors.terms && <p className='font-[amma3] text-[11px] text-red-500'>{errors.terms}</p>}
 
-            <button type='submit' disabled={loading} className='w-full py-[14px] bg-gray-900 text-white font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black transition-colors disabled:opacity-50 mt-[8px]'>
-              {loading ? 'Creating account...' : 'Create Account'}
+            <button type='submit' disabled={loading || syncing} className='w-full py-[14px] bg-gray-900 text-white font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black transition-colors disabled:opacity-50 mt-[8px] flex items-center justify-center gap-[8px]'>
+              {syncing ? (
+                <>
+                  <div className='w-[14px] h-[14px] border-[1.5px] border-white/30 border-t-white rounded-full animate-spin'></div>
+                  Syncing cart...
+                </>
+              ) : loading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
 

@@ -1,15 +1,18 @@
 import React, { useState, useContext, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authContext } from '../context/AuthContext'
+import { cartOpenContext } from '../context/CartContext'
 import gsap from 'gsap'
 
 const LoginDrawer = ({ open, onClose }) => {
   const { login } = useContext(authContext);
+  const { syncCart } = useContext(cartOpenContext);
   const navigate = useNavigate();
   const [email, setEmail] = useState('abc123@gmail.com');
   const [password, setPassword] = useState('123456');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const drawerRef = useRef(null);
   const overlayRef = useRef(null);
 
@@ -33,12 +36,16 @@ const LoginDrawer = ({ open, onClose }) => {
     setLoading(true);
     try {
       await login(email, password);
+      setLoading(false);
+      setSyncing(true);
+      await syncCart();
       onClose();
       navigate('/checkout');
     } catch (err) {
       setError(err.message || 'Invalid email or password');
     } finally {
       setLoading(false);
+      setSyncing(false);
     }
   };
 
@@ -100,10 +107,15 @@ const LoginDrawer = ({ open, onClose }) => {
 
             <button
               type="submit"
-              disabled={loading}
-              className='w-full py-[15px] bg-gray-900 text-white font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+              disabled={loading || syncing}
+              className='w-full py-[15px] bg-gray-900 text-white font-[amma3] text-[12px] tracking-[3px] uppercase hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-[8px]'
             >
-              {loading ? 'Logging in...' : 'Login & Checkout'}
+              {syncing ? (
+                <>
+                  <div className='w-[14px] h-[14px] border-[1.5px] border-white/30 border-t-white rounded-full animate-spin'></div>
+                  Syncing cart...
+                </>
+              ) : loading ? 'Logging in...' : 'Login & Checkout'}
             </button>
           </form>
 
