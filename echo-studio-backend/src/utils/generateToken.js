@@ -23,43 +23,28 @@ export const generateRefreshToken = async (userId) => {
   return { token, expiresAt };
 };
 
-export const getCookieDomain = () => {
-  if (process.env.NODE_ENV !== 'production') return undefined;
-  try {
-    const url = new URL(env.FRONTEND_URL);
-    return `.${url.hostname}`;
-  } catch {
-    return undefined;
-  }
-};
-
 export const sendTokenResponse = async (user, statusCode, res) => {
   const accessToken = generateAccessToken(user.id);
   const refreshToken = await generateRefreshToken(user.id);
 
-  const cookieDomain = getCookieDomain();
   const isProduction = process.env.NODE_ENV === 'production';
+  const isSecure = isProduction;
 
   const accessTokenOptions = {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    secure: isSecure,
+    sameSite: isSecure ? 'none' : 'lax',
+    maxAge: 15 * 60 * 1000,
     path: '/',
   };
 
   const refreshTokenOptions = {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    secure: isSecure,
+    sameSite: isSecure ? 'none' : 'lax',
     maxAge: REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000,
     path: '/',
   };
-
-  if (cookieDomain) {
-    accessTokenOptions.domain = cookieDomain;
-    refreshTokenOptions.domain = cookieDomain;
-  }
 
   const { passwordHash, ...userWithoutPassword } = user;
 

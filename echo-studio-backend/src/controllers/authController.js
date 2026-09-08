@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import argon2 from 'argon2';
 import prisma from '../config/database.js';
-import { sendTokenResponse, generateAccessToken, getCookieDomain } from '../utils/generateToken.js';
+import { sendTokenResponse, generateAccessToken } from '../utils/generateToken.js';
 import env from '../config/env.js';
 
 export const register = async (req, res, next) => {
@@ -112,7 +112,6 @@ export const refresh = async (req, res, next) => {
       },
     });
 
-    const cookieDomain = getCookieDomain();
     const isProduction = process.env.NODE_ENV === 'production';
 
     const accessTokenOptions = {
@@ -131,11 +130,6 @@ export const refresh = async (req, res, next) => {
       path: '/',
     };
 
-    if (cookieDomain) {
-      accessTokenOptions.domain = cookieDomain;
-      refreshTokenOptions.domain = cookieDomain;
-    }
-
     res
       .status(200)
       .cookie('jwt', accessToken, accessTokenOptions)
@@ -153,10 +147,8 @@ export const logout = async (req, res, next) => {
       await prisma.refreshToken.deleteMany({ where: { token: refreshToken } });
     }
 
-    const cookieDomain = getCookieDomain();
     const isProduction = process.env.NODE_ENV === 'production';
     const clearOptions = { httpOnly: true, path: '/' };
-    if (cookieDomain) clearOptions.domain = cookieDomain;
     if (isProduction) {
       clearOptions.secure = true;
       clearOptions.sameSite = 'none';
